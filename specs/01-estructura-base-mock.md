@@ -40,7 +40,7 @@ Nuevas estructuras introducidas (TypeScript, `camelCase` en la app):
 ```ts
 // src/features/jobs/domain/types.ts
 export type WorkModality = "Remoto" | "Híbrido" | "Presencial";
-export type EnglishLevel = "No especificado" | "B1" | "B2" | "C1";
+export type EnglishLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 
 // src/features/jobs/domain/entities/JobOffer.ts
 export interface JobOffer {
@@ -53,7 +53,6 @@ export interface JobOffer {
   englishLevel: EnglishLevel;
   isPracticante: boolean;
   locationText: string; // lugar
-  distanceKm: number | null; // null = remoto
   url: string;
   createdAt: string; // fecha ISO (base del filtro "Nuevos hoy")
 }
@@ -62,7 +61,7 @@ export interface JobOffer {
 export interface UserProfile {
   stack: string[];
   experienceYears: number; // 0 activa el modo practicante
-  englishLevel: "B1" | "B2" | "C1";
+  englishLevel: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
   locationText: string; // mock, sin GPS real
 }
 ```
@@ -79,7 +78,7 @@ Cada paso deja el sistema funcional y verificable con `npx tsc --noEmit`.
 4. Crear la infraestructura de jobs: `InMemoryJobRepository` + archivo de datos mock (~12–15 vacantes variadas en modalidad, inglés, practicante, stack, lugar y fecha).
 5. Crear el dominio e infraestructura de profile: `UserProfile`, interfaz `ProfileRepository` y `InMemoryProfileRepository`.
 6. Crear los contextos `ProfileProvider` y `FavoritesProvider` y renderizarlos en `app/_layout.tsx` junto con el `<Stack>` raíz. Crear `app/index.tsx` con el `<Redirect>` según exista perfil.
-7. Crear el grupo `(drawer)` con `_layout.tsx` (Drawer + `CustomDrawerContent`) y las tres pantallas vacías (`index`, `favorites`, `profile`) para verificar que la navegación funciona.
+7. Crear el grupo `(drawer)` con `_layout.tsx` (Drawer + `CustomDrawerContent`) y las pantallas vacías (`feed`, `favorites`, `profile`) para verificar que la navegación funciona. La pantalla Inicio vive en `(drawer)/feed` (URL `/feed`) para evitar el choque con `app/index.tsx` en `/`.
 8. Implementar `FeedScreen` con `FlatList` + filtro único "Nuevos hoy" + `JobCard` (puesto, empresa, modalidad y lugar).
 9. Implementar `FavoritesScreen` y `WorkScreen` (`app/work/[id].tsx`) con toggle de favorito y botón "Ver oferta original" (`Linking.openURL`).
 10. Implementar `OnboardingScreen` (guardar perfil y redirigir) y `ProfileScreen` (resumen del perfil).
@@ -101,6 +100,7 @@ Cada paso deja el sistema funcional y verificable con `npx tsc --noEmit`.
 ## Decisions
 
 - **Sí:** Expo Router. Alinea con el README y da enrutamiento por archivos (`app/`, grupo `(drawer)`, `work/[id]`).
+- **Sí:** gate en `app/index.tsx` y Feed en `(drawer)/feed` (URL `/feed`). Evita la ruta duplicada `/` que Expo Router rechaza.
 - **Sí:** repositorio mock en memoria detrás de la interfaz del repositorio. Sustituir por Supabase después no toca las pantallas.
 - **Sí:** React Context (`useState`) para perfil y favoritos. Sin TanStack Query ni MMKV en esta fase.
 - **Sí:** un único filtro en el Feed ("Nuevos hoy"). Los chips de la visión completa del README se dejan para specs posteriores.
