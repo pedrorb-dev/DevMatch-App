@@ -14,7 +14,7 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen
               name="work/[id]"
-              options={{ headerShown: true, title: 'Detalle' }}
+              options={{ headerShown: true, title: 'Más Información' }}
             />
           </Stack>
         </FavoritesProvider>

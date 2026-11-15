@@ -64,6 +64,26 @@ export function WorkScreen({ jobId }: WorkScreenProps) {
       <Text style={styles.sectionTitle}>Descripción</Text>
       <Text style={styles.description}>{job.description}</Text>
 
+      <Text style={styles.sectionTitle}>Qué necesitan</Text>
+      <View style={styles.bulletList}>
+        {job.requirements.map((item) => (
+          <View key={item} style={styles.bulletItem}>
+            <Text style={styles.bullet}>•</Text>
+            <Text style={styles.bulletText}>{item}</Text>
+          </View>
+        ))}
+      </View>
+
+      <Text style={styles.sectionTitle}>Qué ofrecen</Text>
+      <View style={styles.bulletList}>
+        {job.benefits.map((item) => (
+          <View key={item} style={styles.bulletItem}>
+            <Text style={styles.bullet}>•</Text>
+            <Text style={styles.bulletText}>{item}</Text>
+          </View>
+        ))}
+      </View>
+
       <Pressable
         onPress={() => toggleFavorite(job.id)}
         style={[styles.secondaryButton, favorite && styles.secondaryButtonActive]}
@@ -154,6 +174,25 @@ const styles = StyleSheet.create({
     fontWeight: theme.fontWeight.medium,
   },
   description: {
+    fontSize: theme.fontSize.sm,
+    lineHeight: 22,
+    color: theme.colors.text,
+  },
+  bulletList: {
+    gap: theme.spacing.xs,
+  },
+  bulletItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.sm,
+  },
+  bullet: {
+    fontSize: theme.fontSize.sm,
+    lineHeight: 22,
+    color: theme.colors.primary,
+  },
+  bulletText: {
+    flex: 1,
     fontSize: theme.fontSize.sm,
     lineHeight: 22,
     color: theme.colors.text,

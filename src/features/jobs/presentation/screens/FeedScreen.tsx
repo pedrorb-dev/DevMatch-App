@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -13,25 +14,45 @@ import { theme } from '@/core/theme/theme';
 import { JobCard } from '../components/JobCard';
 import { useJobs } from '../hooks/useJobs';
 
-const isToday = (isoDate: string): boolean => {
-  const date = new Date(isoDate);
-  const now = new Date();
+const DAYS_BACK = 15;
+
+type DayFilter = {
+  daysAgo: number;
+  label: string;
+};
+
+const dayLabel = (daysAgo: number): string => {
+  if (daysAgo === 0) return 'Hoy';
+  if (daysAgo === 1) return 'Ayer';
+  return `Hace ${daysAgo} días`;
+};
+
+const dayFilters: DayFilter[] = Array.from({ length: DAYS_BACK + 1 }, (_, daysAgo) => ({
+  daysAgo,
+  label: dayLabel(daysAgo),
+}));
+
+/** Compara la fecha de publicación contra el día calendario de hace `daysAgo`. */
+const isCreatedOnDay = (isoDate: string, daysAgo: number, now: Date): boolean => {
+  const created = new Date(isoDate);
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo);
   return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
+    created.getFullYear() === target.getFullYear() &&
+    created.getMonth() === target.getMonth() &&
+    created.getDate() === target.getDate()
   );
 };
 
 export function FeedScreen() {
   const router = useRouter();
   const { jobs, isLoading, error } = useJobs();
-  const [onlyToday, setOnlyToday] = useState(false);
+  const [selectedDaysAgo, setSelectedDaysAgo] = useState<number | null>(null);
 
-  const visibleJobs = useMemo(
-    () => (onlyToday ? jobs.filter((job) => isToday(job.createdAt)) : jobs),
-    [jobs, onlyToday],
-  );
+  const visibleJobs = useMemo(() => {
+    if (selectedDaysAgo === null) return jobs;
+    const now = new Date();
+    return jobs.filter((job) => isCreatedOnDay(job.createdAt, selectedDaysAgo, now));
+  }, [jobs, selectedDaysAgo]);
 
   if (isLoading) {
     return (
@@ -51,18 +72,38 @@ export function FeedScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.chipsRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.chipsScroll}
+        contentContainerStyle={styles.chipsRow}
+      >
         <Pressable
-          onPress={() => setOnlyToday((current) => !current)}
-          style={[styles.chip, onlyToday && styles.chipActive]}
+          onPress={() => setSelectedDaysAgo(null)}
+          style={[styles.chip, selectedDaysAgo === null && styles.chipActive]}
           accessibilityRole="button"
-          accessibilityState={{ selected: onlyToday }}
+          accessibilityState={{ selected: selectedDaysAgo === null }}
         >
-          <Text style={[styles.chipText, onlyToday && styles.chipTextActive]}>
-            Nuevos hoy
+          <Text style={[styles.chipText, selectedDaysAgo === null && styles.chipTextActive]}>
+            Todos
           </Text>
         </Pressable>
-      </View>
+
+        {dayFilters.map(({ daysAgo, label }) => {
+          const isActive = selectedDaysAgo === daysAgo;
+          return (
+            <Pressable
+              key={daysAgo}
+              onPress={() => setSelectedDaysAgo(daysAgo)}
+              style={[styles.chip, isActive && styles.chipActive]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isActive }}
+            >
+              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       <FlatList
         data={visibleJobs}
@@ -94,8 +135,12 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.sm,
     color: theme.colors.danger,
   },
+  chipsScroll: {
+    flexGrow: 0,
+  },
   chipsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     gap: theme.spacing.sm,

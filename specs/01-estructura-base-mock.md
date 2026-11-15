@@ -49,6 +49,8 @@ export interface JobOffer {
   company: string; // empresa
   modality: WorkModality; // Remoto / Híbrido / Presencial
   description: string;
+  requirements: string[]; // qué necesitan
+  benefits: string[]; // qué ofrecen
   stack: string[];
   englishLevel: EnglishLevel;
   isPracticante: boolean;

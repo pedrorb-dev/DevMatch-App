@@ -1,9 +1,5 @@
 import type { JobOffer } from '../../domain/entities/JobOffer';
 
-/**
- * Devuelve una fecha ISO relativa a hoy. Se usa para que el filtro
- * "Nuevos hoy" del Feed siga funcionando sin fechas fijas.
- */
 const daysAgo = (days: number): string => {
   const date = new Date();
   date.setDate(date.getDate() - days);
@@ -18,6 +14,16 @@ export const mockJobs: JobOffer[] = [
     modality: 'Remoto',
     description:
       'Desarrollo de aplicaciones web con Angular y TypeScript. Equipo distribuido en LATAM.',
+    requirements: [
+      '3+ años de experiencia con Angular y TypeScript',
+      'Experiencia con RxJS y consumo de APIs REST',
+      'Inglés B2 para reuniones con equipo internacional',
+    ],
+    benefits: [
+      'Trabajo 100% remoto',
+      'Prestaciones superiores a la ley',
+      'Presupuesto anual para cursos y certificaciones',
+    ],
     stack: ['Angular', 'TypeScript', 'RxJS'],
     englishLevel: 'B2',
     isPracticante: false,
@@ -32,6 +38,16 @@ export const mockJobs: JobOffer[] = [
     modality: 'Híbrido',
     description:
       'Construcción de servicios REST con Spring Boot para una plataforma financiera.',
+    requirements: [
+      '2+ años desarrollando con Java y Spring Boot',
+      'Conocimientos de PostgreSQL',
+      'Inglés B1 para documentación técnica',
+    ],
+    benefits: [
+      'Esquema híbrido (2 días en oficina)',
+      'Seguro de gastos médicos mayores',
+      'Bono anual por desempeño',
+    ],
     stack: ['Java', 'Spring Boot', 'PostgreSQL'],
     englishLevel: 'B1',
     isPracticante: false,
@@ -46,6 +62,16 @@ export const mockJobs: JobOffer[] = [
     modality: 'Presencial',
     description:
       'Apoyo en el desarrollo de interfaces con React y consumo de APIs con Node.js.',
+    requirements: [
+      'Estudiante de último semestre de Ingeniería o afín',
+      'Conocimientos básicos de React y Node.js',
+      'Muchas ganas de aprender',
+    ],
+    benefits: [
+      'Beca mensual',
+      'Horario flexible compatible con estudios',
+      'Posibilidad de contratación al terminar',
+    ],
     stack: ['React', 'Node.js', 'JavaScript'],
     englishLevel: 'A2',
     isPracticante: true,
@@ -60,6 +86,16 @@ export const mockJobs: JobOffer[] = [
     modality: 'Remoto',
     description:
       'Mantenimiento y nuevas features en una app móvil de entregas con React Native.',
+    requirements: [
+      '2+ años con React Native',
+      'Experiencia publicando apps en App Store y Google Play',
+      'Inglés B2',
+    ],
+    benefits: [
+      'Remoto desde cualquier país de LATAM',
+      'Equipo de alto rendimiento',
+      'Días libres adicionales',
+    ],
     stack: ['React Native', 'TypeScript'],
     englishLevel: 'B2',
     isPracticante: false,
@@ -74,6 +110,16 @@ export const mockJobs: JobOffer[] = [
     modality: 'Híbrido',
     description:
       'Programa de formación para recién egresados en desarrollo backend con Python.',
+    requirements: [
+      'Recién egresado o último semestre',
+      'Base de Python y FastAPI',
+      'Inglés B1',
+    ],
+    benefits: [
+      'Programa de mentoría',
+      'Capacitación pagada',
+      'Contrato por tiempo indeterminado al concluir',
+    ],
     stack: ['Python', 'FastAPI'],
     englishLevel: 'B1',
     isPracticante: true,
@@ -88,6 +134,12 @@ export const mockJobs: JobOffer[] = [
     modality: 'Presencial',
     description:
       'Desarrollo end-to-end de soluciones empresariales con .NET y SQL Server.',
+    requirements: [
+      '3+ años con C# y .NET',
+      'Manejo de SQL Server',
+      'Experiencia con APIs REST',
+    ],
+    benefits: ['Trabajo presencial en Querétaro', 'Comedor subsidiado', 'Fondo de ahorro'],
     stack: ['C#', '.NET', 'SQL Server'],
     englishLevel: 'B1',
     isPracticante: false,
@@ -100,8 +152,9 @@ export const mockJobs: JobOffer[] = [
     title: 'Ingeniero DevOps',
     company: 'CloudNova',
     modality: 'Remoto',
-    description:
-      'Automatización de pipelines CI/CD y gestión de infraestructura en AWS.',
+    description: 'Automatización de pipelines CI/CD y gestión de infraestructura en AWS.',
+    requirements: ['3+ años en DevOps', 'Dominio de AWS, Docker y Kubernetes', 'Inglés C1'],
+    benefits: ['100% remoto', 'Certificaciones pagadas', 'Stock options'],
     stack: ['AWS', 'Docker', 'Kubernetes'],
     englishLevel: 'C1',
     isPracticante: false,
@@ -116,6 +169,8 @@ export const mockJobs: JobOffer[] = [
     modality: 'Híbrido',
     description:
       'Creación de interfaces de usuario con Vue.js para productos de e-commerce.',
+    requirements: ['2+ años con Vue.js', 'JavaScript moderno (ES6+)', 'Portafolio de proyectos'],
+    benefits: ['Modelo híbrido', 'Ambiente creativo', 'Seguro médico'],
     stack: ['Vue.js', 'JavaScript'],
     englishLevel: 'A2',
     isPracticante: false,
@@ -130,6 +185,12 @@ export const mockJobs: JobOffer[] = [
     modality: 'Presencial',
     description:
       'Automatización de pruebas funcionales con Selenium y Java bajo supervisión.',
+    requirements: [
+      'Estudiante de ingeniería',
+      'Conocimientos de Selenium y Java',
+      'Atención al detalle',
+    ],
+    benefits: ['Beca económica', 'Capacitación en automatización', 'Home office parcial'],
     stack: ['Selenium', 'Java'],
     englishLevel: 'A2',
     isPracticante: true,
@@ -142,8 +203,9 @@ export const mockJobs: JobOffer[] = [
     title: 'Backend Node.js',
     company: 'LogiTech',
     modality: 'Remoto',
-    description:
-      'Desarrollo de microservicios con Node.js y MongoDB para logística.',
+    description: 'Desarrollo de microservicios con Node.js y MongoDB para logística.',
+    requirements: ['3+ años con Node.js', 'Experiencia con Express y MongoDB', 'Inglés B2'],
+    benefits: ['Remoto', 'Pago en USD', 'Horario flexible'],
     stack: ['Node.js', 'Express', 'MongoDB'],
     englishLevel: 'B2',
     isPracticante: false,
@@ -156,8 +218,13 @@ export const mockJobs: JobOffer[] = [
     title: 'Practicante Data Science',
     company: 'Insight AI',
     modality: 'Híbrido',
-    description:
-      'Análisis de datos y modelos básicos de machine learning con Python.',
+    description: 'Análisis de datos y modelos básicos de machine learning con Python.',
+    requirements: [
+      'Último semestre de carrera afín',
+      'Python, Pandas y scikit-learn',
+      'Inglés B1',
+    ],
+    benefits: ['Beca mensual', 'Mentoría de científicos de datos', 'Proyectos reales'],
     stack: ['Python', 'Pandas', 'scikit-learn'],
     englishLevel: 'B1',
     isPracticante: true,
@@ -172,6 +239,8 @@ export const mockJobs: JobOffer[] = [
     modality: 'Presencial',
     description:
       'Desarrollo de aplicaciones Android nativas con Kotlin y Jetpack Compose.',
+    requirements: ['2+ años con Kotlin', 'Experiencia con Jetpack Compose', 'Inglés B2'],
+    benefits: ['Trabajo presencial en Guadalajara', 'Seguro médico', 'Capacitación continua'],
     stack: ['Kotlin', 'Android', 'Jetpack Compose'],
     englishLevel: 'B2',
     isPracticante: false,
@@ -186,6 +255,8 @@ export const mockJobs: JobOffer[] = [
     modality: 'Remoto',
     description:
       'Desarrollo de aplicaciones empresariales con Java, Angular y Spring Boot.',
+    requirements: ['4+ años de experiencia', 'Java, Angular y Spring Boot', 'Inglés C1'],
+    benefits: ['100% remoto', 'Bono anual', 'Plataforma de aprendizaje'],
     stack: ['Java', 'Angular', 'Spring Boot'],
     englishLevel: 'C1',
     isPracticante: false,
@@ -200,6 +271,8 @@ export const mockJobs: JobOffer[] = [
     modality: 'Híbrido',
     description:
       'Primer empleo en desarrollo frontend con React y JavaScript moderno.',
+    requirements: ['1+ año con React', 'JavaScript moderno', 'Inglés básico'],
+    benefits: ['Modelo híbrido', 'Mentoría', 'Oportunidad de crecimiento'],
     stack: ['React', 'JavaScript'],
     englishLevel: 'A2',
     isPracticante: false,
