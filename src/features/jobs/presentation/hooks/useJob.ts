@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { JobOffer } from '../../domain/entities/JobOffer';
-import { jobRepository } from '../../infrastructure/repositories/InMemoryJobRepository';
+import { jobRepository } from '../../infrastructure/repositories/SupabaseJobRepository';
 
 interface UseJobResult {
   job: JobOffer | null;

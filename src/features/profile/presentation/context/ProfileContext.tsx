@@ -9,7 +9,7 @@ import {
 } from 'react';
 
 import type { UserProfile } from '../../domain/entities/UserProfile';
-import { profileRepository } from '../../infrastructure/repositories/InMemoryProfileRepository';
+import { profileRepository } from '../../infrastructure/repositories/SupabaseProfileRepository';
 
 interface ProfileContextValue {
   profile: UserProfile | null;
@@ -27,12 +27,23 @@ export function ProfileProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let isMounted = true;
 
-    profileRepository.getProfile().then((stored) => {
-      if (isMounted) {
-        setProfile(stored);
-        setIsLoading(false);
-      }
-    });
+    profileRepository
+      .getProfile()
+      .then((stored) => {
+        if (isMounted) {
+          setProfile(stored);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setProfile(null);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
 
     return () => {
       isMounted = false;

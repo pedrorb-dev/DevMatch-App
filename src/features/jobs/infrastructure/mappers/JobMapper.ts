@@ -1,0 +1,38 @@
+import type { JobOffer } from '../../domain/entities/JobOffer';
+import type { EnglishLevel, WorkModality } from '../../domain/types';
+
+/** Fila de `public.vacantes` tal como llega de Supabase (snake_case). */
+export interface VacanteRow {
+  id: string;
+  titulo: string;
+  empresa: string;
+  modalidad: WorkModality;
+  descripcion: string;
+  requirements: string[];
+  benefits: string[];
+  stack_detectado: string[];
+  nivel_ingles: EnglishLevel;
+  es_practicante: boolean;
+  ubicacion_texto: string;
+  url_oferta: string;
+  created_at: string;
+}
+
+/** Convierte una fila de `vacantes` en la entidad de dominio `JobOffer`. */
+export function toJobOffer(row: VacanteRow): JobOffer {
+  return {
+    id: row.id,
+    title: row.titulo,
+    company: row.empresa,
+    modality: row.modalidad,
+    description: row.descripcion,
+    requirements: row.requirements ?? [],
+    benefits: row.benefits ?? [],
+    stack: row.stack_detectado ?? [],
+    englishLevel: row.nivel_ingles,
+    isPracticante: row.es_practicante,
+    locationText: row.ubicacion_texto,
+    url: row.url_oferta,
+    createdAt: row.created_at,
+  };
+}
