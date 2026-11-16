@@ -122,23 +122,52 @@ class JobEnrichmentPipeline:
         "rest": "REST",
     }
 
-    PRACTICANTE_KEYWORDS = [
-        "practicante",
-        "becario",
-        "estadias",
-        "sin experiencia",
-        "0 anos",
-        "0 anios",
-        "0 año",
-        "0 años",
-        "trainee",
-        "intern",
-        "internship",
-        "entry level",
-        "entry-level",
-        "junior",
-        "jr",
-        "jr.",
+    # Pre-filtro por título/descripción; el texto se normaliza (minúsculas, sin acentos).
+    ENTRY_LEVEL_PATTERNS = [
+        r"\bsin experiencia\b",
+        r"\bno experience\b",
+        r"\bbecari[oa]s?\b",
+        r"\bpracticantes?\b",
+        r"\btrainees?\b",
+        r"\bintern(?:ship)?s?\b",
+        r"\bestadias?\b",
+    ]
+
+    SENIOR_PATTERNS = [
+        r"\bsenior\b",
+        r"\bsr\b\.?",
+        r"\blead\b",
+    ]
+
+    STACK_PATTERNS = [
+        (r"\bspring\s*boot\b", "Spring Boot"),
+        (r"\bangular(?:js)?\b", "Angular"),
+        (r"\btypescript\b", "TypeScript"),
+        (r"\bjavascript\b", "JavaScript"),
+        (r"\bnode\.?\s?js\b", "Node.js"),
+        (r"\bpostgres(?:ql)?\b", "PostgreSQL"),
+        (r"\bmysql\b", "MySQL"),
+        (r"\bmongodb\b", "MongoDB"),
+        (r"\bkubernetes\b|\bk8s\b", "Kubernetes"),
+        (r"\bdocker\b", "Docker"),
+        (r"\bgraphql\b", "GraphQL"),
+        (r"\bfastapi\b", "FastAPI"),
+        (r"\bdjango\b", "Django"),
+        (r"\bflask\b", "Flask"),
+        (r"\blaravel\b", "Laravel"),
+        (r"\breact(?:js)?\b", "React"),
+        (r"\bpython\b", "Python"),
+        (r"\bjava\b", "Java"),
+        (r"\bsql\b", "SQL"),
+        (r"\baws\b", "AWS"),
+        (r"\bgcp\b|\bgoogle cloud\b", "GCP"),
+        (r"\bgit\b", "Git"),
+        (r"\.net\b|\bdotnet\b", ".NET"),
+        (r"\bc#", "C#"),
+        (r"\bphp\b", "PHP"),
+        (r"\bruby\b", "Ruby"),
+        (r"\bgolang\b|\bgo\b", "Go"),
+        (r"\bvue(?:\.js)?\b", "Vue"),
     ]
 
     def _detect_modalidad(self, adapter):
@@ -154,7 +183,7 @@ class JobEnrichmentPipeline:
         # Check híbrido/hybrid before remoto in case of mixed strings, but signals are explicit
         if re.search(r"\bhibrido\b|\bhibrid\b|\bhybrid\b", text):
             return "Híbrido"
-        if re.search(r"\bremoto\b|\bremote\b", text):
+        if re.search(r"\bremoto\b|\bremote\b|\btelecommute\b|\btelework\b", text):
             return "Remoto"
         if re.search(r"\bpresencial\b|\bon[- ]?site\b|\bonsite\b", text):
             return "Presencial"
@@ -191,62 +220,40 @@ class JobEnrichmentPipeline:
                     found[key] = canon
 
         haystack = _normalize_text(f"{adapter.get('titulo') or ''} {adapter.get('descripcion') or ''}")
-        # keyword matching over title+description
-        checks = [
-            ("spring boot", "Spring Boot"),
-            ("springboot", "Spring Boot"),
-            ("angular", "Angular"),
-            ("typescript", "TypeScript"),
-            ("javascript", "JavaScript"),
-            ("node.js", "Node.js"),
-            ("nodejs", "Node.js"),
-            ("postgresql", "PostgreSQL"),
-            ("postgres", "PostgreSQL"),
-            ("mysql", "MySQL"),
-            ("mongodb", "MongoDB"),
-            ("kubernetes", "Kubernetes"),
-            ("docker", "Docker"),
-            ("graphql", "GraphQL"),
-            ("fastapi", "FastAPI"),
-            ("django", "Django"),
-            ("flask", "Flask"),
-            ("laravel", "Laravel"),
-            ("react", "React"),
-            ("python", "Python"),
-            ("java", "Java"),
-            ("sql", "SQL"),
-            ("aws", "AWS"),
-            ("gcp", "GCP"),
-            ("git", "Git"),
-            (".net", ".NET"),
-            ("c#", "C#"),
-            ("php", "PHP"),
-            ("ruby", "Ruby"),
-            ("golang", "Go"),
-            (" vue ", "Vue"),
-            (" go ", "Go"),
-        ]
-        padded = f" {haystack} "
-        for needle, canonical in checks:
-            n = _normalize_text(needle)
-            if n in padded or n.strip() in haystack:
-                key = canonical.lower()
-                if key not in found:
-                    found[key] = canonical
+        # keyword matching over title+description, with word boundaries so that
+        # e.g. "Java" does not match "JavaScript" and "SQL" does not match "PostgreSQL"
+        for pattern, canonical in self.STACK_PATTERNS:
+            if not re.search(pattern, haystack):
+                continue
+            key = canonical.lower()
+            if key not in found:
+                found[key] = canonical
 
         return list(found.values())
 
-    def _detect_es_practicante(self, adapter):
+    def _detect_experiencia_minima(self, adapter):
         text = _normalize_text(f"{adapter.get('titulo') or ''} {adapter.get('descripcion') or ''}")
-        for kw in self.PRACTICANTE_KEYWORDS:
-            if _normalize_text(kw) in text:
-                return True
-        # regex helpers for 0 años / jr. variants
-        if re.search(r"\b0\s*(anos|anios|año|años|years?)\b", text):
-            return True
-        if re.search(r"\bjr\b", text):
-            return True
-        return False
+
+        # 1. Años explícitos: "3 años", "2+ years", "1 a 3 años" (se toma el mínimo del rango)
+        rango = re.search(r"(\d{1,2})\s*(?:-|a|to)\s*(\d{1,2})\s*(?:anos|anios|ano|years?|yrs?)", text)
+        if rango:
+            return min(int(rango.group(1)), int(rango.group(2)))
+        explicito = re.search(r"(\d{1,2})\s*\+?\s*(?:anos|anios|ano|years?|yrs?)", text)
+        if explicito:
+            return int(explicito.group(1))
+
+        # 2. Indicador de entrada
+        for pattern in self.ENTRY_LEVEL_PATTERNS:
+            if re.search(pattern, text):
+                return 0
+
+        # 3. Indicador senior sin número
+        for pattern in self.SENIOR_PATTERNS:
+            if re.search(pattern, text):
+                return 4
+
+        # 4. Sin mención
+        return 1
 
     def _is_mostly_english(self, text):
         sample = str(text or "")
@@ -402,7 +409,7 @@ class JobEnrichmentPipeline:
         adapter = ItemAdapter(item)
         adapter["modalidad"] = self._detect_modalidad(adapter)
         adapter["stack_detectado"] = self._detect_stack(adapter)
-        adapter["es_practicante"] = self._detect_es_practicante(adapter)
+        adapter["experiencia_minima"] = self._detect_experiencia_minima(adapter)
         adapter["nivel_ingles"] = self._detect_nivel_ingles(adapter)
 
         requirements = self._normalize_string_list(adapter.get("requirements") or [])
@@ -443,6 +450,13 @@ class SupabaseUpsertPipeline:
         self.client = create_client(self.supabase_url, self.supabase_key)
         spider.logger.info("SupabaseUpsertPipeline connected.")
 
+    @staticmethod
+    def _coerce_experiencia_minima(value):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 1
+
     def process_item(self, item, spider):
         if not self.client:
             return item
@@ -456,7 +470,7 @@ class SupabaseUpsertPipeline:
             "benefits": adapter.get("benefits") or [],
             "stack_detectado": adapter.get("stack_detectado") or [],
             "nivel_ingles": adapter.get("nivel_ingles") or "No especificado",
-            "es_practicante": bool(adapter.get("es_practicante")),
+            "experiencia_minima": self._coerce_experiencia_minima(adapter.get("experiencia_minima")),
             "ubicacion_texto": adapter.get("ubicacion_texto") or "",
             "url_oferta": adapter.get("url_oferta") or "",
         }

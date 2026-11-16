@@ -1,19 +1,11 @@
 import json
 import re
 from html import unescape
-from urllib.parse import quote_plus, urlencode, urljoin, urlparse, urlunparse, parse_qsl
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qsl
 
 import scrapy
-from supabase import create_client
 
-
-BASE_URL = "https://hireline.io"
-BASE_ROUTES = [
-    "/mx/empleos-de-trainee",
-    "/mx/empleos-de-desarrollador-junior",
-    "/mx/empleos-de-remoto",
-    "/remoto/empleos-de-junior",
-]
+from ..utils.query_builder import SearchQueryBuilder
 
 
 class HirelineSpider(scrapy.Spider):
@@ -28,49 +20,33 @@ class HirelineSpider(scrapy.Spider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._seen_detail_urls = set()
+        self._query_builder = None
 
-    def _get_profile_stack_technologies(self):
-        """Fetch unique technologies from user_profiles.stack. Fail-safe to empty list."""
-        url = (self.settings.get("SUPABASE_URL") or "").strip()
-        key = (self.settings.get("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
-        if not url or not key:
-            self.logger.info("Supabase credentials not configured; skipping stack-based queries.")
-            return []
+    @property
+    def query_builder(self):
+        # `self.settings` only exists once Scrapy attaches the crawler, so the
+        # builder is created lazily on first use.
+        if self._query_builder is None:
+            self._query_builder = SearchQueryBuilder.from_settings(self.settings)
+        return self._query_builder
 
-        try:
-            client = create_client(url, key)
-            response = client.table("user_profiles").select("stack").execute()
-            rows = getattr(response, "data", None) or []
-            techs = set()
-            for row in rows:
-                stack = row.get("stack") if isinstance(row, dict) else None
-                if isinstance(stack, list):
-                    for value in stack:
-                        if isinstance(value, str):
-                            cleaned = value.strip()
-                            if cleaned:
-                                techs.add(cleaned)
-                elif isinstance(stack, str) and stack.strip():
-                    techs.add(stack.strip())
-            result = sorted(techs)
-            self.logger.info("Loaded %d unique technologies from user_profiles.stack", len(result))
-            return result
-        except Exception as exc:
-            self.logger.warning("Could not load user_profiles.stack (%s); using base routes only.", exc)
-            return []
+    @query_builder.setter
+    def query_builder(self, builder):
+        self._query_builder = builder
 
     async def start(self):
         for request in self.start_requests():
             yield request
 
     def start_requests(self):
-        start_urls = [urljoin(BASE_URL, route) for route in BASE_ROUTES]
-        for tech in self._get_profile_stack_technologies():
-            start_urls.append(f"{BASE_URL}/mx/empleos?k={quote_plus(tech)}")
+        urls = self.query_builder.build_urls("hireline")
+        if not urls:
+            self.logger.warning("SearchQueryBuilder returned no Hireline URLs; nothing to crawl.")
+        self.logger.info("SearchQueryBuilder generated %d Hireline URLs", len(urls))
 
         # Deduplicate while preserving order
         seen = set()
-        for url in start_urls:
+        for url in urls:
             if url in seen:
                 continue
             seen.add(url)
@@ -82,6 +58,21 @@ class HirelineSpider(scrapy.Spider):
         query["page"] = str(page_number)
         new_query = urlencode(query, doseq=True)
         return urlunparse(parsed._replace(query=new_query))
+
+    def _extract_card_title(self, card):
+        title = " ".join(
+            self._clean_text(t)
+            for t in card.css(
+                "h1 ::text, h2 ::text, h3 ::text, h4 ::text, "
+                "[class*='title'] ::text, [class*='titulo'] ::text"
+            ).getall()
+        ).strip()
+        if not title:
+            # Fallback: first meaningful chunk of the card text (usually the title).
+            texts = [self._clean_text(t) for t in card.css("::text").getall()]
+            texts = [t for t in texts if t]
+            title = texts[0] if texts else ""
+        return title
 
     def parse(self, response):
         cards = response.css("a.hl-vacancy-card")
@@ -97,12 +88,14 @@ class HirelineSpider(scrapy.Spider):
             detail_url = response.urljoin(href)
             if "hireline.io" not in urlparse(detail_url).netloc:
                 continue
-            # Heuristic: treat job detail pages as those containing /empleo/ or /vacante/; if card itself is anchor to detail keep it
             if detail_url not in self._seen_detail_urls:
                 self._seen_detail_urls.add(detail_url)
-                detail_hrefs.append(detail_url)
+                detail_hrefs.append((detail_url, self._extract_card_title(card)))
 
-        for detail_url in detail_hrefs:
+        for detail_url, title in detail_hrefs:
+            if not self.query_builder.should_follow_job(title):
+                self.logger.debug("Skipping %s (title=%r) by seniority pre-filter", detail_url, title)
+                continue
             yield scrapy.Request(detail_url, callback=self.parse_detail)
 
         page = int(response.meta.get("page", 1))

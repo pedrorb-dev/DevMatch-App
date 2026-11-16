@@ -1,4 +1,4 @@
-name: Daily Hireline Scrape
+name: Daily Job Scrape
 
 on:
   schedule:
@@ -27,5 +27,5 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Hireline spider
-        run: scrapy crawl hireline
+      - name: Run spiders (Hireline + OCCMundial)
+        run: python run_spiders.py

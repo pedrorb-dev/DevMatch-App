@@ -37,7 +37,7 @@ Aplicación móvil multiplataforma diseñada para automatizar la búsqueda de em
 
 ### Automatización & Web Scraping
 
-- **Scraper:** Python + **Scrapy** (pipelines de limpieza, normalización y geocodificación con Nominatim)
+- **Scraper:** Python + **Scrapy** con dos fuentes (**Hireline** y **OCCMundial**), rutas de búsqueda generadas dinámicamente desde `user_profiles` (`stack` + `experiencia_anos`) y pipelines de limpieza, normalización y geocodificación con Nominatim
 - **CI/CD & Scheduler:** GitHub Actions (ejecución programada **1 vez al día** vía `cron` + ejecución manual con `workflow_dispatch`)
 
 ## Arquitectura del Proyecto
@@ -107,12 +107,18 @@ devmatch/
 │
 ├── scraper/                          # Proyecto Scrapy en Python
 │   ├── scrapy.cfg
-│   ├── geocache.json                 # Caché local de coordenadas por ciudad
+│   ├── requirements.txt
+│   ├── run_spiders.py                # Runner secuencial: Hireline → OCCMundial
+│   ├── tests/                        # pytest (pipelines, query builder y spiders)
 │   └── job_scraper/
 │       ├── items.py                  # Modelo estandarizado de la vacante
-│       ├── pipelines.py              # Limpieza, scoring, PostGIS y Expo Push
+│       ├── pipelines.py              # Limpieza, enriquecimiento y upsert a Supabase
 │       ├── settings.py
-│       └── spiders/                  # Spiders por portal de empleo
+│       ├── utils/
+│       │   └── query_builder.py      # URLs por plataforma + should_follow_job
+│       └── spiders/                  # Un spider por portal
+│           ├── hireline_spider.py
+│           └── occ_spider.py
 │
 └── .github/
     └── workflows/
@@ -132,7 +138,7 @@ devmatch/
 | `resumen_descripcion` | `text`             | Extracto limpio (~600 caracteres) con requisitos clave para lectura offline.    |
 | `stack_detectado`     | `text[]`           | Tecnologías identificadas (ej. `['Angular', 'Spring Boot']`).                   |
 | `nivel_ingles`        | `text`             | `No especificado`, `B1`, `B2` o `C1`.                                           |
-| `es_practicante`      | `boolean`          | `true` si aplica para 0 años de experiencia / becario / trainee.                |
+| `experiencia_minima`  | `integer`          | Años mínimos inferidos (`0` = becario/practicante/trainee/intern, `4` = senior). |
 | `ubicacion_texto`     | `text`             | Ciudad y estado extraídos del portal.                                           |
 | `coordenadas`         | `geography(Point)` | Punto geográfico `(lng, lat)` para cálculo de distancia con PostGIS.            |
 | `url_oferta`          | `text` (Unique)    | Enlace directo utilizado por el botón de `WorkScreen` para ir a la oferta real. |
@@ -162,7 +168,7 @@ devmatch/
 
 El workflow `.github/workflows/daily_scrape.yml` ejecuta el pipeline **1 vez al día** (07:30 AM hora centro de México):
 
-1. **Extracción y Normalización:** Scrapy recolecta vacantes recientes, detecta modalidad (`Remoto` / `Híbrido` / `Presencial`), stack tecnológico, nivel de inglés y perfil practicante.
+1. **Extracción y Normalización:** Scrapy recolecta vacantes recientes de **Hireline** y **OCCMundial**, generando las URLs desde `user_profiles` (`stack` + `experiencia_anos`) y pre-filtrando por seniority (`should_follow_job`) antes de descargar cada ficha. Detecta modalidad (`Remoto` / `Híbrido` / `Presencial`), stack tecnológico, nivel de inglés y `experiencia_minima`.
 2. **Geocodificación:** Convierte `ubicacion_texto` a coordenadas `(lat, lng)` usando `geocache.json` y Nominatim.
 3. **Inserción y Notificaciones:** Guarda nuevas vacantes en Supabase (evitando duplicados por `url_oferta`) y envía alertas vía Expo Push API cuando hay alta afinidad con `user_profiles`.
 4. **Purga Automática al Día 16:** Al finalizar el pipeline, se eliminan las vacantes que superan los **15 días** de antigüedad, excluyendo aquellas que el usuario haya guardado en **Favoritos**:
@@ -205,15 +211,28 @@ npx expo start
 
 ```bash
 cd scraper
-python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
-pip install scrapy supabase requests python-dotenv
+python -m venv .venv
+.venv\Scripts\activate     # En macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-Ejecuta una prueba local del spider:
+Copia `.env.example` a `.env` y completa tus credenciales de Supabase:
+
+```env
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
+```
+
+Ejecuta ambos spiders de forma secuencial (**Hireline** y luego **OCCMundial**):
 
 ```bash
-scrapy crawl empleos_spider
+python run_spiders.py
+```
+
+Verifica los tests del scraper:
+
+```bash
+pytest -q
 ```
 
 ## Roadmap de Desarrollo

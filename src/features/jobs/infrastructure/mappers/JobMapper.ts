@@ -12,7 +12,7 @@ export interface VacanteRow {
   benefits: string[];
   stack_detectado: string[];
   nivel_ingles: EnglishLevel;
-  es_practicante: boolean;
+  experiencia_minima: number;
   ubicacion_texto: string;
   url_oferta: string;
   created_at: string;
@@ -30,7 +30,7 @@ export function toJobOffer(row: VacanteRow): JobOffer {
     benefits: row.benefits ?? [],
     stack: row.stack_detectado ?? [],
     englishLevel: row.nivel_ingles,
-    isPracticante: row.es_practicante,
+    isPracticante: (row.experiencia_minima ?? 1) === 0,
     locationText: row.ubicacion_texto,
     url: row.url_oferta,
     createdAt: row.created_at,

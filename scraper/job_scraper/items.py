@@ -14,7 +14,7 @@ class JobOfferItem(scrapy.Item):
     # normalizados por el pipeline
     modalidad = scrapy.Field()  # 'Remoto' | 'Híbrido' | 'Presencial'
     stack_detectado = scrapy.Field()  # list[str]
-    es_practicante = scrapy.Field()  # bool
+    experiencia_minima = scrapy.Field()  # int (0, 1, 2, 4, ...)
     nivel_ingles = scrapy.Field()  # 'No especificado' | 'B1' | 'B2' | 'C1'
     requirements = scrapy.Field()  # list[str] (extraídos/normalizados; pueden quedar vacíos si no hay sección)
     benefits = scrapy.Field()  # list[str] (extraídos/normalizados; pueden quedar vacíos si no hay sección)

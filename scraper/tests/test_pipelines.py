@@ -40,7 +40,7 @@ def test_vacante_en_espanol_normalizacion():
     assert enriched["titulo"] == "Desarrollador Java Junior (Practicante)"
     assert enriched["url_oferta"].startswith("https://hireline.io/mx/empleos/123")
     assert enriched["modalidad"] == "Híbrido"
-    assert enriched["es_practicante"] is True
+    assert enriched["experiencia_minima"] == 0  # "practicante" + "sin experiencia"
     assert enriched["nivel_ingles"] == "B1"
     assert "Java" in enriched["stack_detectado"]
     assert "Spring Boot" in enriched["stack_detectado"]
@@ -70,7 +70,7 @@ def test_vacante_en_ingles_no_se_descarta_y_se_normaliza():
 
     assert enriched["empresa"] == "Global Tech"
     assert enriched["modalidad"] == "Remoto"
-    assert enriched["es_practicante"] is True  # entry level / junior
+    assert enriched["experiencia_minima"] == 1  # sin indicador de entrada ni años
     assert enriched["nivel_ingles"] in {"B1", "B2", "C1"}  # English description => at least B1
     assert "Python" in enriched["stack_detectado"]
     assert "Docker" in enriched["stack_detectado"]
@@ -155,3 +155,82 @@ def test_vacante_ingles_separa_requirements_y_benefits():
     assert "What We're Looking For" not in enriched["descripcion"]
     assert "Responsibilities" in enriched["descripcion"] or "maintain applications" in enriched["descripcion"]
     assert enriched["nivel_ingles"] in {"B1", "B2", "C1"}
+    assert enriched["experiencia_minima"] == 5  # "5+ years"
+
+
+# --- experiencia_minima (bilingüe) -----------------------------------------
+
+
+def detect_experiencia(titulo, descripcion=""):
+    item = JobOfferItem(
+        titulo=titulo,
+        empresa="ACME",
+        modalidad_raw="",
+        ubicacion_texto="",
+        descripcion=descripcion,
+        tags_tecnologias=[],
+        url_oferta="https://example.com/empleo/1",
+    )
+    return run_enrichment(run_cleaning(item))["experiencia_minima"]
+
+
+@pytest.mark.parametrize(
+    ("titulo", "descripcion", "expected"),
+    [
+        # 1. Años explícitos (ES/EN), incluidos rangos (se toma el mínimo)
+        ("Desarrollador Java", "Requisitos: 3 años de experiencia con Java", 3),
+        ("Backend Engineer", "You need 2+ years of experience with Python", 2),
+        ("Desarrollador Backend", "1 a 3 años de experiencia en desarrollo", 1),
+        ("Data Engineer", "2-4 years of experience in data pipelines", 2),
+        # La regla de años explícitos gana a los indicadores de entrada/senior
+        ("Becario de desarrollo", "Buscamos becario con 2 años de experiencia", 2),
+        # 2. Indicadores de entrada
+        ("Becario de TI", "", 0),
+        ("Practicante de desarrollo", "", 0),
+        ("Desarrollador sin experiencia", "", 0),
+        ("Software Engineer Intern", "", 0),
+        ("Trainee Developer", "", 0),
+        ("Estadías en desarrollo", "", 0),
+        ("Developer", "No experience required, we will train you", 0),
+        # 3. Indicador senior sin número
+        ("Senior Java Developer", "", 4),
+        ("Sr. Backend Developer", "", 4),
+        ("Lead Software Engineer", "", 4),
+        # 4. Sin mención
+        ("Desarrollador Java", "", 1),
+        ("Frontend Developer", "React and TypeScript para productos internos", 1),
+    ],
+)
+def test_experiencia_minima_bilingue(titulo, descripcion, expected):
+    assert detect_experiencia(titulo, descripcion) == expected
+
+
+def test_telecommute_se_normaliza_a_remoto():
+    item = JobOfferItem(
+        titulo="Desarrollador Python",
+        empresa="ACME",
+        modalidad_raw="TELECOMMUTE",
+        ubicacion_texto="",
+        descripcion="",
+        tags_tecnologias=[],
+        url_oferta="https://www.occ.com.mx/empleo/oferta/1",
+    )
+
+    enriched = run_enrichment(run_cleaning(item))
+    assert enriched["modalidad"] == "Remoto"
+
+
+def test_pipeline_no_emite_es_practicante():
+    item = JobOfferItem(
+        titulo="Desarrollador Java",
+        empresa="ACME",
+        modalidad_raw="Remote",
+        ubicacion_texto="Remote: Mexico",
+        descripcion="",
+        tags_tecnologias=[],
+        url_oferta="https://example.com/empleo/2",
+    )
+
+    enriched = run_enrichment(run_cleaning(item))
+    assert "experiencia_minima" in enriched
+    assert "es_practicante" not in enriched
