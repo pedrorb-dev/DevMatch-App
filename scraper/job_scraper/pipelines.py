@@ -1,0 +1,502 @@
+import re
+import unicodedata
+from datetime import datetime, timedelta, timezone
+
+from itemadapter import ItemAdapter
+from scrapy.exceptions import DropItem
+from supabase import create_client
+
+
+def _strip_accents(text):
+    normalized = unicodedata.normalize("NFD", text or "")
+    return "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
+
+
+def _normalize_text(text):
+    return re.sub(r"\s+", " ", _strip_accents(str(text or "")).lower()).strip()
+
+
+class DataCleaningPipeline:
+    def _clean_string(self, value):
+        if value is None:
+            return ""
+        if isinstance(value, (list, tuple)):
+            value = " ".join(str(v) for v in value if v is not None)
+        # Remove tags if any HTML slipped through and collapse whitespace
+        text = re.sub(r"<[^>]+>", " ", str(value))
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+    def _clean_list(self, value):
+        if value is None:
+            return []
+        if isinstance(value, str):
+            items = re.split(r"\n+|[•]", value)
+        elif isinstance(value, (list, tuple)):
+            items = list(value)
+        else:
+            items = [value]
+        cleaned = []
+        seen = set()
+        for item in items:
+            text = self._clean_string(item)
+            text = re.sub(r"^[\-–—*·]+\s*", "", text).strip()
+            if not text:
+                continue
+            key = text.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            cleaned.append(text)
+        return cleaned
+
+    def process_item(self, item, spider):
+        adapter = ItemAdapter(item)
+
+        for field in ["titulo", "empresa", "modalidad_raw", "ubicacion_texto", "descripcion", "url_oferta"]:
+            adapter[field] = self._clean_string(adapter.get(field))
+
+        tags = adapter.get("tags_tecnologias") or []
+        if isinstance(tags, str):
+            tags = [t.strip() for t in re.split(r"[,;/|]", tags) if t.strip()]
+        cleaned_tags = []
+        seen = set()
+        for tag in tags:
+            tag_clean = self._clean_string(tag)
+            if tag_clean and tag_clean.lower() not in seen:
+                seen.add(tag_clean.lower())
+                cleaned_tags.append(tag_clean)
+        adapter["tags_tecnologias"] = cleaned_tags
+
+        adapter["requirements"] = self._clean_list(adapter.get("requirements"))
+        adapter["benefits"] = self._clean_list(adapter.get("benefits"))
+
+        if not adapter.get("titulo") or not adapter.get("url_oferta"):
+            raise DropItem("Missing required field: titulo or url_oferta")
+
+        return item
+
+
+class JobEnrichmentPipeline:
+    STACK_KEYWORDS = {
+        "spring boot": "Spring Boot",
+        "springboot": "Spring Boot",
+        "spring": "Spring Boot",
+        "angular": "Angular",
+        "react": "React",
+        "vue": "Vue",
+        "java": "Java",
+        "javascript": "JavaScript",
+        "typescript": "TypeScript",
+        "python": "Python",
+        "sql": "SQL",
+        "postgres": "PostgreSQL",
+        "postgresql": "PostgreSQL",
+        "mysql": "MySQL",
+        "docker": "Docker",
+        "kubernetes": "Kubernetes",
+        "k8s": "Kubernetes",
+        "aws": "AWS",
+        "azure": "Azure",
+        "gcp": "GCP",
+        "node": "Node.js",
+        "nodejs": "Node.js",
+        "node.js": "Node.js",
+        "django": "Django",
+        "flask": "Flask",
+        "fastapi": "FastAPI",
+        ".net": ".NET",
+        "dotnet": ".NET",
+        "c#": "C#",
+        "php": "PHP",
+        "laravel": "Laravel",
+        "ruby": "Ruby",
+        "rails": "Ruby on Rails",
+        "go": "Go",
+        "golang": "Go",
+        "git": "Git",
+        "linux": "Linux",
+        "mongodb": "MongoDB",
+        "redis": "Redis",
+        "graphql": "GraphQL",
+        "rest": "REST",
+    }
+
+    PRACTICANTE_KEYWORDS = [
+        "practicante",
+        "becario",
+        "estadias",
+        "sin experiencia",
+        "0 anos",
+        "0 anios",
+        "0 año",
+        "0 años",
+        "trainee",
+        "intern",
+        "internship",
+        "entry level",
+        "entry-level",
+        "junior",
+        "jr",
+        "jr.",
+    ]
+
+    def _detect_modalidad(self, adapter):
+        text = _normalize_text(
+            " ".join(
+                [
+                    str(adapter.get("modalidad_raw") or ""),
+                    str(adapter.get("ubicacion_texto") or ""),
+                    str(adapter.get("descripcion") or ""),
+                ]
+            )
+        )
+        # Check híbrido/hybrid before remoto in case of mixed strings, but signals are explicit
+        if re.search(r"\bhibrido\b|\bhibrid\b|\bhybrid\b", text):
+            return "Híbrido"
+        if re.search(r"\bremoto\b|\bremote\b", text):
+            return "Remoto"
+        if re.search(r"\bpresencial\b|\bon[- ]?site\b|\bonsite\b", text):
+            return "Presencial"
+        return "Presencial"
+
+    def _canonicalize_stack_token(self, token):
+        norm = _normalize_text(token)
+        norm_compact = norm.replace(".", "").replace("#", " sharp").strip()
+        # direct map
+        for key, canonical in self.STACK_KEYWORDS.items():
+            key_norm = _normalize_text(key)
+            if norm == key_norm or norm_compact == _normalize_text(key.replace(".", "")):
+                return canonical
+        # contains-based fallbacks for common variants
+        if "spring" in norm and "boot" in norm:
+            return "Spring Boot"
+        if norm in {"js", "javascript"}:
+            return "JavaScript"
+        if norm in {"ts", "typescript"}:
+            return "TypeScript"
+        if norm == "nodejs":
+            return "Node.js"
+        # Title-case reasonable default for unknown tags
+        return token.strip()
+
+    def _detect_stack(self, adapter):
+        found = {}
+        tags = adapter.get("tags_tecnologias") or []
+        for tag in tags:
+            canon = self._canonicalize_stack_token(tag)
+            if canon:
+                key = canon.lower()
+                if key not in found:
+                    found[key] = canon
+
+        haystack = _normalize_text(f"{adapter.get('titulo') or ''} {adapter.get('descripcion') or ''}")
+        # keyword matching over title+description
+        checks = [
+            ("spring boot", "Spring Boot"),
+            ("springboot", "Spring Boot"),
+            ("angular", "Angular"),
+            ("typescript", "TypeScript"),
+            ("javascript", "JavaScript"),
+            ("node.js", "Node.js"),
+            ("nodejs", "Node.js"),
+            ("postgresql", "PostgreSQL"),
+            ("postgres", "PostgreSQL"),
+            ("mysql", "MySQL"),
+            ("mongodb", "MongoDB"),
+            ("kubernetes", "Kubernetes"),
+            ("docker", "Docker"),
+            ("graphql", "GraphQL"),
+            ("fastapi", "FastAPI"),
+            ("django", "Django"),
+            ("flask", "Flask"),
+            ("laravel", "Laravel"),
+            ("react", "React"),
+            ("python", "Python"),
+            ("java", "Java"),
+            ("sql", "SQL"),
+            ("aws", "AWS"),
+            ("gcp", "GCP"),
+            ("git", "Git"),
+            (".net", ".NET"),
+            ("c#", "C#"),
+            ("php", "PHP"),
+            ("ruby", "Ruby"),
+            ("golang", "Go"),
+            (" vue ", "Vue"),
+            (" go ", "Go"),
+        ]
+        padded = f" {haystack} "
+        for needle, canonical in checks:
+            n = _normalize_text(needle)
+            if n in padded or n.strip() in haystack:
+                key = canonical.lower()
+                if key not in found:
+                    found[key] = canonical
+
+        return list(found.values())
+
+    def _detect_es_practicante(self, adapter):
+        text = _normalize_text(f"{adapter.get('titulo') or ''} {adapter.get('descripcion') or ''}")
+        for kw in self.PRACTICANTE_KEYWORDS:
+            if _normalize_text(kw) in text:
+                return True
+        # regex helpers for 0 años / jr. variants
+        if re.search(r"\b0\s*(anos|anios|año|años|years?)\b", text):
+            return True
+        if re.search(r"\bjr\b", text):
+            return True
+        return False
+
+    def _is_mostly_english(self, text):
+        sample = str(text or "")
+        if len(sample) < 40:
+            # short texts: rely on common english words
+            words = re.findall(r"[a-zA-Z]+", _normalize_text(sample))
+        else:
+            words = re.findall(r"[a-zA-Z]+", sample.lower())
+        if not words:
+            return False
+        english_common = {
+            "the", "and", "with", "you", "for", "our", "are", "will", "experience", "team",
+            "work", "knowledge", "skills", "development", "software", "engineer", "developer",
+            "we", "in", "to", "of", "on", "as", "or", "be", "is", "at", "an", "this",
+            "that", "from", "requirements", "responsibilities", "benefits", "about", "role",
+            "looking", "years", "ability", "working", "position", "company", "job",
+        }
+        hits = sum(1 for w in words if w in english_common)
+        # also consider absence of common spanish markers
+        spanish_markers = re.findall(r"\b(de|la|el|y|en|con|para|que|los|las|del|experiencia|conocimientos|requisitos|responsabilidades|empresa|puesto)\b", _normalize_text(sample))
+        if len(words) >= 30:
+            return hits >= max(5, len(words) * 0.08) and len(spanish_markers) <= hits
+        return hits >= 4 and len(spanish_markers) == 0
+
+    def _detect_nivel_ingles(self, adapter):
+        text = _normalize_text(f"{adapter.get('titulo') or ''} {adapter.get('descripcion') or ''}")
+        # C1 / bilingual / native
+        if re.search(r"\bbilingual\b|\bnativo\b|\bnative\b|\bc1\b", text):
+            return "C1"
+        # B2 / advanced / fluent
+        if re.search(r"\bavanzado\b|\badvanced\b|\bfluent\b|\bfluido\b", text):
+            return "B2"
+        # B1 / intermediate / conversational
+        if re.search(r"\bintermedio\b|\bintermediate\b|\bconversational\b|\bconversacional\b", text):
+            return "B1"
+
+        descripcion = str(adapter.get("descripcion") or "")
+        if descripcion and self._is_mostly_english(descripcion):
+            return "B1"
+        return "No especificado"
+
+    def _classify_heading(self, text):
+        h = _normalize_text(text)
+        h = re.sub(r"[:\-–—]+$", "", h).strip()
+        req_keys = [
+            "requisitos", "requerimientos", "conocimientos deseables", "conocimientos obligatorios",
+            "conocimientos", "perfil", "lo que buscamos", "que buscamos", "que necesitas",
+            "requisitos minimos", "requirements", "what we're looking for", "what we are looking for",
+            "qualifications", "must have", "skills", "desired skills", "preferred qualifications",
+        ]
+        ben_keys = [
+            "ofrecemos", "que ofrecemos", "lo que ofrecemos", "beneficios", "prestaciones",
+            "benefits", "what we offer", "we offer", "why join us", "perks", "compensation",
+        ]
+        for k in ben_keys:
+            if k in h:
+                return "benefits"
+        for k in req_keys:
+            if k in h:
+                return "requirements"
+        desc_keys = [
+            "actividades", "responsabilidades", "funciones", "descripcion general",
+            "que haras", "what you'll do", "what you will do", "responsibilities",
+            "about the role", "about us", "role",
+        ]
+        for k in desc_keys:
+            if k in h:
+                return "description"
+        return "description"
+
+    def _split_sections_from_text(self, text):
+        raw = str(text or "").strip()
+        if not raw:
+            return {"descripcion": "", "requirements": [], "benefits": []}
+        t = raw.replace("\r\n", "\n").replace("\r", "\n")
+        pattern = re.compile(
+            r"(?im)^(?:\s*)(requisitos|requerimientos|conocimientos deseables|conocimientos obligatorios|perfil|lo que buscamos|actividades|responsabilidades|funciones|descripción general|descripcion general|qué harás|que haras|ofrecemos|qué ofrecemos|que ofrecemos|lo que ofrecemos|beneficios|prestaciones|requirements|what we're looking for|what we are looking for|qualifications|what you'll do|what you will do|responsibilities|benefits|what we offer|we offer|why join us)\s*:?\s*$"
+        )
+        matches = list(pattern.finditer(t))
+        if not matches:
+            inline = re.compile(
+                r"(?i)(requisitos|requerimientos|conocimientos deseables|actividades|responsabilidades|ofrecemos|qué ofrecemos|que ofrecemos|beneficios|requirements|what we're looking for|qualifications|responsibilities|benefits|what we offer)\s*:\s*"
+            )
+            matches = list(inline.finditer(t))
+        if not matches:
+            return {"descripcion": re.sub(r"\s+", " ", t).strip(), "requirements": [], "benefits": []}
+
+        intro = t[: matches[0].start()].strip()
+        buckets = {"description": [intro] if intro else [], "requirements": [], "benefits": []}
+        for i, m in enumerate(matches):
+            heading = m.group(1)
+            start = m.end()
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(t)
+            body = t[start:end].strip()
+            section = self._classify_heading(heading)
+            if not body:
+                continue
+            if section in {"requirements", "benefits"}:
+                candidates = re.split(r"\n+|(?:\s+[•\-–—]\s+)", body)
+                items = []
+                for c in candidates:
+                    for sub in re.split(r"\s*[•\-–—]\s+", c):
+                        it = re.sub(r"\s+", " ", sub).strip()
+                        it = re.sub(r"^[\-–—*·]+\s*", "", it).strip()
+                        if it:
+                            items.append(it)
+                if not items and body:
+                    items = [re.sub(r"\s+", " ", body).strip()]
+                buckets[section].extend(items)
+            else:
+                buckets["description"].append(re.sub(r"\s+", " ", body).strip())
+
+        def dedupe(items):
+            out = []
+            seen = set()
+            for it in items:
+                k = _normalize_text(it)
+                if k and k not in seen:
+                    seen.add(k)
+                    out.append(it)
+            return out
+
+        descripcion = "\n\n".join([p for p in buckets["description"] if p]).strip()
+        return {
+            "descripcion": descripcion,
+            "requirements": dedupe(buckets["requirements"]),
+            "benefits": dedupe(buckets["benefits"]),
+        }
+
+    def _normalize_string_list(self, values):
+        if not values:
+            return []
+        if isinstance(values, str):
+            values = [values]
+        cleaned = []
+        seen = set()
+        for v in values:
+            if v is None:
+                continue
+            text = re.sub(r"<[^>]+>", " ", str(v))
+            text = re.sub(r"\s+", " ", text).strip()
+            text = re.sub(r"^[\-–—*·]+\s*", "", text).strip()
+            if not text:
+                continue
+            key = _normalize_text(text)
+            if key in seen:
+                continue
+            seen.add(key)
+            cleaned.append(text)
+        return cleaned
+
+    def process_item(self, item, spider):
+        adapter = ItemAdapter(item)
+        adapter["modalidad"] = self._detect_modalidad(adapter)
+        adapter["stack_detectado"] = self._detect_stack(adapter)
+        adapter["es_practicante"] = self._detect_es_practicante(adapter)
+        adapter["nivel_ingles"] = self._detect_nivel_ingles(adapter)
+
+        requirements = self._normalize_string_list(adapter.get("requirements") or [])
+        benefits = self._normalize_string_list(adapter.get("benefits") or [])
+        descripcion = str(adapter.get("descripcion") or "").strip()
+
+        if (not requirements and not benefits) and descripcion:
+            split = self._split_sections_from_text(descripcion)
+            if split.get("requirements") or split.get("benefits"):
+                requirements = split.get("requirements") or []
+                benefits = split.get("benefits") or []
+                descripcion = split.get("descripcion") or descripcion
+
+        adapter["requirements"] = requirements
+        adapter["benefits"] = benefits
+        adapter["descripcion"] = descripcion
+        return item
+
+
+class SupabaseUpsertPipeline:
+    def __init__(self, supabase_url, supabase_key):
+        self.supabase_url = (supabase_url or "").strip()
+        self.supabase_key = (supabase_key or "").strip()
+        self.client = None
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(
+            supabase_url=crawler.settings.get("SUPABASE_URL"),
+            supabase_key=crawler.settings.get("SUPABASE_SERVICE_ROLE_KEY"),
+        )
+
+    def open_spider(self, spider):
+        if not self.supabase_url or not self.supabase_key:
+            spider.logger.warning("SupabaseUpsertPipeline disabled: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.")
+            self.client = None
+            return
+        self.client = create_client(self.supabase_url, self.supabase_key)
+        spider.logger.info("SupabaseUpsertPipeline connected.")
+
+    def process_item(self, item, spider):
+        if not self.client:
+            return item
+        adapter = ItemAdapter(item)
+        payload = {
+            "titulo": adapter.get("titulo") or "",
+            "empresa": adapter.get("empresa") or "",
+            "modalidad": adapter.get("modalidad") or "Presencial",
+            "descripcion": adapter.get("descripcion") or "",
+            "requirements": adapter.get("requirements") or [],
+            "benefits": adapter.get("benefits") or [],
+            "stack_detectado": adapter.get("stack_detectado") or [],
+            "nivel_ingles": adapter.get("nivel_ingles") or "No especificado",
+            "es_practicante": bool(adapter.get("es_practicante")),
+            "ubicacion_texto": adapter.get("ubicacion_texto") or "",
+            "url_oferta": adapter.get("url_oferta") or "",
+        }
+        try:
+            self.client.table("vacantes").upsert(payload, on_conflict="url_oferta").execute()
+        except Exception as exc:
+            spider.logger.error("Failed to upsert vacante '%s': %s", payload.get("url_oferta"), exc)
+        return item
+
+    def close_spider(self, spider):
+        if not self.client:
+            return
+        try:
+            # Exclude vacantes referenced by saved_jobs
+            saved_resp = self.client.table("saved_jobs").select("job_id").execute()
+            saved_rows = getattr(saved_resp, "data", None) or []
+            saved_ids = [row.get("job_id") for row in saved_rows if isinstance(row, dict) and row.get("job_id")]
+
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
+
+            if saved_ids:
+                # Delete old vacantes not in saved_jobs. Chunk to avoid very large filters.
+                # Fetch candidates and delete by id to be safe across postgrest versions.
+                old_resp = (
+                    self.client.table("vacantes")
+                    .select("job_id, created_at")
+                    .lt("created_at", cutoff)
+                    .execute()
+                )
+                old_rows = getattr(old_resp, "data", None) or []
+                to_delete = [
+                    row.get("job_id")
+                    for row in old_rows
+                    if isinstance(row, dict) and row.get("job_id") and row.get("job_id") not in set(saved_ids)
+                ]
+                for job_id in to_delete:
+                    self.client.table("vacantes").delete().eq("job_id", job_id).execute()
+                spider.logger.info("Purged %d old vacantes (kept saved).", len(to_delete))
+            else:
+                self.client.table("vacantes").delete().lt("created_at", cutoff).execute()
+                spider.logger.info("Purged old vacantes older than 15 days (no saved jobs).")
+        except Exception as exc:
+            spider.logger.error("Failed to purge old vacantes: %s", exc)

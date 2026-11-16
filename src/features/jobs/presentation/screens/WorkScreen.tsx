@@ -64,25 +64,33 @@ export function WorkScreen({ jobId }: WorkScreenProps) {
       <Text style={styles.sectionTitle}>Descripción</Text>
       <Text style={styles.description}>{job.description}</Text>
 
-      <Text style={styles.sectionTitle}>Qué necesitan</Text>
-      <View style={styles.bulletList}>
-        {job.requirements.map((item) => (
-          <View key={item} style={styles.bulletItem}>
-            <Text style={styles.bullet}>•</Text>
-            <Text style={styles.bulletText}>{item}</Text>
+      {job.requirements.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Qué necesitan</Text>
+          <View style={styles.bulletList}>
+            {job.requirements.map((item) => (
+              <View key={item} style={styles.bulletItem}>
+                <Text style={styles.bullet}>•</Text>
+                <Text style={styles.bulletText}>{item}</Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
+        </>
+      )}
 
-      <Text style={styles.sectionTitle}>Qué ofrecen</Text>
-      <View style={styles.bulletList}>
-        {job.benefits.map((item) => (
-          <View key={item} style={styles.bulletItem}>
-            <Text style={styles.bullet}>•</Text>
-            <Text style={styles.bulletText}>{item}</Text>
+      {job.benefits.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Qué ofrecen</Text>
+          <View style={styles.bulletList}>
+            {job.benefits.map((item) => (
+              <View key={item} style={styles.bulletItem}>
+                <Text style={styles.bullet}>•</Text>
+                <Text style={styles.bulletText}>{item}</Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
+        </>
+      )}
 
         <Pressable
         onPress={() => {
@@ -222,6 +230,7 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   primaryButton: {
+    marginTop: theme.spacing.lg,
     paddingVertical: theme.spacing.lg,
     borderRadius: theme.radius.md,
     backgroundColor: theme.colors.primary,

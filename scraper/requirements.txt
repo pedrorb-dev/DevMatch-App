@@ -1,0 +1,4 @@
+scrapy
+supabase
+python-dotenv
+pytest

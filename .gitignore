@@ -41,3 +41,15 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# scraper (Python/Scrapy)
+scraper/.venv/
+scraper/.env
+scraper/**/__pycache__/
+scraper/**/*.py[cod]
+scraper/.pytest_cache/
+scraper/.scrapy/
+scraper/*.egg-info/
+scraper/build/
+scraper/dist/
+scraper/.eggs/
