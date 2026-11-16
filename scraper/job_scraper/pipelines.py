@@ -27,6 +27,13 @@ class DataCleaningPipeline:
         text = re.sub(r"\s+", " ", text).strip()
         return text
 
+    def _canonical_url(self, value):
+        text = self._clean_string(value)
+        # Primero el fragmento: puede contener `?` o `#` extra.
+        text = text.split("#", 1)[0]
+        text = text.split("?", 1)[0]
+        return text.strip()
+
     def _clean_list(self, value):
         if value is None:
             return []
@@ -53,8 +60,10 @@ class DataCleaningPipeline:
     def process_item(self, item, spider):
         adapter = ItemAdapter(item)
 
-        for field in ["titulo", "empresa", "modalidad_raw", "ubicacion_texto", "descripcion", "url_oferta"]:
+        for field in ["titulo", "empresa", "modalidad_raw", "ubicacion_texto", "descripcion"]:
             adapter[field] = self._clean_string(adapter.get(field))
+
+        adapter["url_oferta"] = self._canonical_url(adapter.get("url_oferta"))
 
         tags = adapter.get("tags_tecnologias") or []
         if isinstance(tags, str):
@@ -183,7 +192,7 @@ class JobEnrichmentPipeline:
         # Check híbrido/hybrid before remoto in case of mixed strings, but signals are explicit
         if re.search(r"\bhibrido\b|\bhibrid\b|\bhybrid\b", text):
             return "Híbrido"
-        if re.search(r"\bremoto\b|\bremote\b|\btelecommute\b|\btelework\b", text):
+        if re.search(r"\bremoto\b|\bremote\b|\btelecommute\b|\btelework\b|\bdesde casa\b|\bteletrabajo\b", text):
             return "Remoto"
         if re.search(r"\bpresencial\b|\bon[- ]?site\b|\bonsite\b", text):
             return "Presencial"

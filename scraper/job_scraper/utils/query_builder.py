@@ -1,19 +1,3 @@
-"""Generación dinámica de URLs de búsqueda a partir de `user_profiles`.
-
-El spider ya no lleva categorías ni tecnologías hardcodeadas: `SearchQueryBuilder`
-consulta `user_profiles.stack` y `user_profiles.experiencia_anos` una sola vez
-(resultado cacheado) y deriva las URLs de cada plataforma.
-
-Rangos de experiencia y qué aportan a las URLs:
-
-- `0`      -> rutas de entrada (Hireline `trainee`/`becario-ti`, OCC `de-practicante`).
-- `1..3`   -> ruta junior de Hireline.
-- `4+`     -> ruta senior de Hireline.
-- todos    -> una búsqueda por tecnología (`?k={tech}` en Hireline, `de-{slug}` en OCC).
-
-Las búsquedas por tecnología cubren todos los niveles: el filtro fino de seniority
-lo hace `should_follow_job` sobre el título antes de descargar la ficha.
-"""
 
 import re
 import unicodedata
@@ -23,9 +7,11 @@ from supabase import create_client
 
 HIRELINE_BASE = "https://hireline.io"
 OCC_BASE = "https://www.occ.com.mx"
+COMPUTRABAJO_BASE = "https://mx.computrabajo.com"
 
 HIRELINE_PLATFORM = "hireline"
 OCC_PLATFORM = "occ"
+COMPUTRABAJO_PLATFORM = "computrabajo"
 
 
 def _strip_accents(text):
@@ -66,6 +52,44 @@ SENIOR_TITLE_PATTERNS = [
 # Slugs de OCC para los stacks canónicos que detecta el pipeline. El resto se
 # resuelve con `_slugify`.
 OCC_STACK_SLUGS = {
+    "spring boot": "spring-boot",
+    "angular": "angular",
+    "react": "react",
+    "vue": "vue",
+    "java": "java",
+    "javascript": "javascript",
+    "typescript": "typescript",
+    "python": "python",
+    "sql": "sql",
+    "postgresql": "postgresql",
+    "mysql": "mysql",
+    "mongodb": "mongodb",
+    "docker": "docker",
+    "kubernetes": "kubernetes",
+    "aws": "aws",
+    "azure": "azure",
+    "gcp": "gcp",
+    "node.js": "node-js",
+    "django": "django",
+    "flask": "flask",
+    "fastapi": "fastapi",
+    ".net": "dotnet",
+    "c#": "c-sharp",
+    "php": "php",
+    "laravel": "laravel",
+    "ruby": "ruby",
+    "ruby on rails": "ruby-on-rails",
+    "go": "go",
+    "git": "git",
+    "linux": "linux",
+    "redis": "redis",
+    "graphql": "graphql",
+    "rest": "rest",
+}
+
+# Slugs de Computrabajo para los mismos stacks canónicos. Mismos valores que
+# `OCC_STACK_SLUGS`; el resto se resuelve con `_slugify`.
+COMPUTRABAJO_STACK_SLUGS = {
     "spring boot": "spring-boot",
     "angular": "angular",
     "react": "react",
@@ -148,6 +172,16 @@ class SearchQueryBuilder:
     HIRELINE_TECH_SEARCH = "/mx/empleos?k={tech}"
     OCC_ENTRY_SLUG = "practicante"
     OCC_TECH_SEARCH = "/empleos/de-{slug}/"
+    COMPUTRABAJO_ENTRY_ROUTE = "/trabajo-de-trainee-ti"
+    COMPUTRABAJO_TECH_SEARCH = "/trabajo-de-{slug}"
+    # Prefijos de entrada por tecnología (cuando hay perfiles de 0 años).
+    COMPUTRABAJO_ENTRY_PREFIXES = ("practicante", "becario", "desarrollador-junior")
+    COMPUTRABAJO_ENTRY_SEARCH = "/trabajo-de-{prefix}-{slug}"
+    COMPUTRABAJO_JUNIOR_SEARCH = "/trabajo-de-desarrollador-{slug}"
+    COMPUTRABAJO_SENIOR_SEARCHES = (
+        "/trabajo-de-senior-{slug}",
+        "/trabajo-de-lider-tecnico-{slug}",
+    )
 
     def __init__(self, supabase_url=None, supabase_key=None, client=None, rows=None):
         self._supabase_url = (supabase_url or "").strip()
@@ -256,8 +290,13 @@ class SearchQueryBuilder:
             urls = self._build_hireline_urls()
         elif platform == OCC_PLATFORM:
             urls = self._build_occ_urls()
+        elif platform == COMPUTRABAJO_PLATFORM:
+            urls = self._build_computrabajo_urls()
         else:
-            raise ValueError(f"Plataforma no soportada: {platform!r} (usa 'hireline' u 'occ')")
+            raise ValueError(
+                f"Plataforma no soportada: {platform!r} "
+                "(usa 'hireline', 'occ' o 'computrabajo')"
+            )
         return list(dict.fromkeys(urls))
 
     def _build_hireline_urls(self):
@@ -285,5 +324,33 @@ class SearchQueryBuilder:
             slug = OCC_STACK_SLUGS.get(tech.strip().lower()) or _slugify(tech)
             if slug:
                 urls.append(f"{OCC_BASE}{self.OCC_TECH_SEARCH.format(slug=slug)}")
+
+        return urls
+
+    def _build_computrabajo_urls(self):
+        urls = []
+
+        # Ruta estática única de entrada (sin slug).
+        if self._entry_allowed:
+            urls.append(f"{COMPUTRABAJO_BASE}{self.COMPUTRABAJO_ENTRY_ROUTE}")
+
+        for tech in self.stack:
+            slug = COMPUTRABAJO_STACK_SLUGS.get(tech.strip().lower()) or _slugify(tech)
+            if not slug:
+                continue
+
+            # Búsqueda base por tecnología: siempre, en cualquier rango.
+            urls.append(f"{COMPUTRABAJO_BASE}{self.COMPUTRABAJO_TECH_SEARCH.format(slug=slug)}")
+
+            if self._entry_allowed:
+                for prefix in self.COMPUTRABAJO_ENTRY_PREFIXES:
+                    route = self.COMPUTRABAJO_ENTRY_SEARCH.format(prefix=prefix, slug=slug)
+                    urls.append(f"{COMPUTRABAJO_BASE}{route}")
+            if self.has_junior_level:
+                route = self.COMPUTRABAJO_JUNIOR_SEARCH.format(slug=slug)
+                urls.append(f"{COMPUTRABAJO_BASE}{route}")
+            if self.has_senior_level:
+                for route in self.COMPUTRABAJO_SENIOR_SEARCHES:
+                    urls.append(f"{COMPUTRABAJO_BASE}{route.format(slug=slug)}")
 
         return urls

@@ -70,6 +70,73 @@ def test_build_urls_occ_perfil_cinco_anos():
     ]
 
 
+def test_build_urls_computrabajo_perfil_cero_anos():
+    builder = make_builder([{"stack": ["Java", "Python"], "experiencia_anos": 0}])
+
+    assert builder.build_urls("computrabajo") == [
+        "https://mx.computrabajo.com/trabajo-de-trainee-ti",
+        "https://mx.computrabajo.com/trabajo-de-java",
+        "https://mx.computrabajo.com/trabajo-de-practicante-java",
+        "https://mx.computrabajo.com/trabajo-de-becario-java",
+        "https://mx.computrabajo.com/trabajo-de-desarrollador-junior-java",
+        "https://mx.computrabajo.com/trabajo-de-python",
+        "https://mx.computrabajo.com/trabajo-de-practicante-python",
+        "https://mx.computrabajo.com/trabajo-de-becario-python",
+        "https://mx.computrabajo.com/trabajo-de-desarrollador-junior-python",
+    ]
+
+
+def test_build_urls_computrabajo_perfil_dos_anos():
+    builder = make_builder([{"stack": ["Java", "Python"], "experiencia_anos": 2}])
+
+    assert builder.build_urls("computrabajo") == [
+        "https://mx.computrabajo.com/trabajo-de-java",
+        "https://mx.computrabajo.com/trabajo-de-desarrollador-java",
+        "https://mx.computrabajo.com/trabajo-de-python",
+        "https://mx.computrabajo.com/trabajo-de-desarrollador-python",
+    ]
+
+
+def test_build_urls_computrabajo_perfil_cinco_anos():
+    builder = make_builder([{"stack": ["Java", "Python"], "experiencia_anos": 5}])
+
+    assert builder.build_urls("computrabajo") == [
+        "https://mx.computrabajo.com/trabajo-de-java",
+        "https://mx.computrabajo.com/trabajo-de-senior-java",
+        "https://mx.computrabajo.com/trabajo-de-lider-tecnico-java",
+        "https://mx.computrabajo.com/trabajo-de-python",
+        "https://mx.computrabajo.com/trabajo-de-senior-python",
+        "https://mx.computrabajo.com/trabajo-de-lider-tecnico-python",
+    ]
+
+
+def test_build_urls_computrabajo_sin_perfiles_solo_ruta_de_entrada():
+    builder = make_builder([])
+
+    assert builder.build_urls("computrabajo") == [
+        "https://mx.computrabajo.com/trabajo-de-trainee-ti",
+    ]
+
+
+def test_build_urls_computrabajo_combina_rangos_y_dedupea_stack():
+    builder = make_builder(
+        [
+            {"stack": ["Java"], "experiencia_anos": 0},
+            {"stack": ["Java", "SQL"], "experiencia_anos": 2},
+            {"stack": ["Java", "SQL"], "experiencia_anos": 5},
+        ]
+    )
+
+    urls = builder.build_urls("computrabajo")
+
+    assert urls[0] == "https://mx.computrabajo.com/trabajo-de-trainee-ti"
+    assert urls.count("https://mx.computrabajo.com/trabajo-de-java") == 1
+    assert "https://mx.computrabajo.com/trabajo-de-practicante-java" in urls
+    assert "https://mx.computrabajo.com/trabajo-de-desarrollador-java" in urls
+    assert "https://mx.computrabajo.com/trabajo-de-senior-java" in urls
+    assert "https://mx.computrabajo.com/trabajo-de-lider-tecnico-java" in urls
+
+
 def test_build_urls_combina_todos_los_perfiles():
     builder = make_builder(
         [
@@ -154,6 +221,31 @@ def test_build_urls_rechaza_plataforma_desconocida():
 
     with pytest.raises(ValueError):
         builder.build_urls("linkedin")
+
+
+def test_build_urls_menciona_computrabajo_en_el_error():
+    builder = make_builder([{"stack": ["Java"], "experiencia_anos": 2}])
+
+    with pytest.raises(ValueError, match="computrabajo"):
+        builder.build_urls("linkedin")
+
+
+@pytest.mark.parametrize(
+    ("stack", "computrabajo_url"),
+    [
+        ("C#", "https://mx.computrabajo.com/trabajo-de-c-sharp"),
+        (".NET", "https://mx.computrabajo.com/trabajo-de-dotnet"),
+        ("Node.js", "https://mx.computrabajo.com/trabajo-de-node-js"),
+        ("React", "https://mx.computrabajo.com/trabajo-de-react"),
+        ("Ruby on Rails", "https://mx.computrabajo.com/trabajo-de-ruby-on-rails"),
+        # Fallback `_slugify` para tecnologías fuera del mapa canónico.
+        ("Rust", "https://mx.computrabajo.com/trabajo-de-rust"),
+    ],
+)
+def test_build_urls_computrabajo_slugs(stack, computrabajo_url):
+    builder = make_builder([{"stack": [stack], "experiencia_anos": 2}])
+
+    assert computrabajo_url in builder.build_urls("computrabajo")
 
 
 def test_perfil_se_cachea_entre_llamadas():

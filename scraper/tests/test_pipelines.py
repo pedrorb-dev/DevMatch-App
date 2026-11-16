@@ -220,6 +220,80 @@ def test_telecommute_se_normaliza_a_remoto():
     assert enriched["modalidad"] == "Remoto"
 
 
+@pytest.mark.parametrize("modalidad_raw", ["Desde casa", "Teletrabajo", "DESDE CASA", "teletrabajo"])
+def test_modalidad_computrabajo_se_normaliza_a_remoto(modalidad_raw):
+    item = JobOfferItem(
+        titulo="Desarrollador Python",
+        empresa="ACME",
+        modalidad_raw=modalidad_raw,
+        ubicacion_texto="",
+        descripcion="",
+        tags_tecnologias=[],
+        url_oferta="https://mx.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-1",
+    )
+
+    enriched = run_enrichment(run_cleaning(item))
+    assert enriched["modalidad"] == "Remoto"
+
+
+def test_modalidad_desde_casa_en_ubicacion_es_remoto():
+    item = JobOfferItem(
+        titulo="Desarrollador Python",
+        empresa="ACME",
+        modalidad_raw="",
+        ubicacion_texto="Ciudad de México - Desde casa",
+        descripcion="",
+        tags_tecnologias=[],
+        url_oferta="https://mx.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-2",
+    )
+
+    enriched = run_enrichment(run_cleaning(item))
+    assert enriched["modalidad"] == "Remoto"
+
+
+# --- url_oferta canónica (sin fragmento ni query params) -------------------
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        (
+            "https://mx.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-1",
+            "https://mx.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-1",
+        ),
+        (
+            "https://mx.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-1#fragmento",
+            "https://mx.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-1",
+        ),
+        (
+            "https://mx.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-1?ref=test",
+            "https://mx.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-1",
+        ),
+        (
+            "https://mx.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-1?ref=test#fragmento",
+            "https://mx.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-1",
+        ),
+        (
+            "https://mx.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-1#fragmento?ref=test",
+            "https://mx.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-1",
+        ),
+    ],
+)
+def test_cleaning_url_oferta_sin_fragmento_ni_query(url, expected):
+    item = JobOfferItem(
+        titulo="Desarrollador Python",
+        empresa="ACME",
+        modalidad_raw="",
+        ubicacion_texto="",
+        descripcion="",
+        tags_tecnologias=[],
+        url_oferta=url,
+    )
+
+    cleaned = run_cleaning(item)
+    assert cleaned["url_oferta"] == expected
+
+
 def test_pipeline_no_emite_es_practicante():
     item = JobOfferItem(
         titulo="Desarrollador Java",
