@@ -17,22 +17,29 @@ const TECH_OPTIONS = [
   'PHP',
   'FastApi',
   'Django',
-  'Laravel'
+  'Laravel',
 ];
 
 const ENGLISH_OPTIONS: UserProfile['englishLevel'][] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
+type ProfileFormVariant = 'light' | 'dark';
 
 interface ProfileFormProps {
   initialProfile: UserProfile | null;
   submitLabel: string;
   onSubmit: (profile: UserProfile) => Promise<void> | void;
+  variant?: ProfileFormVariant;
 }
 
 /**
- * Formulario de edición de perfil compartido por el onboarding y el modo
- * edición inline de la pantalla de perfil.
+ * Formulario de edición de perfil compartido por el onboarding y el dev menu de perfil.
  */
-export function ProfileForm({ initialProfile, submitLabel, onSubmit }: ProfileFormProps) {
+export function ProfileForm({
+  initialProfile,
+  submitLabel,
+  onSubmit,
+  variant = 'light',
+}: ProfileFormProps) {
   const [stack, setStack] = useState<string[]>(initialProfile?.stack ?? []);
   const [englishLevel, setEnglishLevel] = useState<UserProfile['englishLevel']>(
     initialProfile?.englishLevel ?? 'B1',
@@ -40,6 +47,8 @@ export function ProfileForm({ initialProfile, submitLabel, onSubmit }: ProfileFo
   const [experienceYears, setExperienceYears] = useState(initialProfile?.experienceYears ?? 0);
   const [locationText, setLocationText] = useState(initialProfile?.locationText ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const palette = palettes[variant];
 
   const toggleTech = (tech: string) => {
     setStack((current) =>
@@ -69,7 +78,7 @@ export function ProfileForm({ initialProfile, submitLabel, onSubmit }: ProfileFo
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Stack tecnológico</Text>
+      <Text style={[styles.label, { color: palette.label }]}>Stack tecnológico</Text>
       <View style={styles.chips}>
         {TECH_OPTIONS.map((tech) => {
           const selected = stack.includes(tech);
@@ -77,17 +86,29 @@ export function ProfileForm({ initialProfile, submitLabel, onSubmit }: ProfileFo
             <Pressable
               key={tech}
               onPress={() => toggleTech(tech)}
-              style={[styles.chip, selected && styles.chipSelected]}
+              style={[
+                styles.chip,
+                { borderColor: palette.chipBorder, backgroundColor: palette.chipBackground },
+                selected && styles.chipSelected,
+              ]}
               accessibilityRole="button"
               accessibilityState={{ selected }}
             >
-              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{tech}</Text>
+              <Text
+                style={[
+                  styles.chipText,
+                  { color: palette.chipText },
+                  selected && styles.chipTextSelected,
+                ]}
+              >
+                {tech}
+              </Text>
             </Pressable>
           );
         })}
       </View>
 
-      <Text style={styles.label}>Nivel de inglés</Text>
+      <Text style={[styles.label, { color: palette.label }]}>Nivel de inglés</Text>
       <View style={styles.chips}>
         {ENGLISH_OPTIONS.map((level) => {
           const selected = englishLevel === level;
@@ -95,44 +116,69 @@ export function ProfileForm({ initialProfile, submitLabel, onSubmit }: ProfileFo
             <Pressable
               key={level}
               onPress={() => setEnglishLevel(level)}
-              style={[styles.chip, selected && styles.chipSelected]}
+              style={[
+                styles.chip,
+                { borderColor: palette.chipBorder, backgroundColor: palette.chipBackground },
+                selected && styles.chipSelected,
+              ]}
               accessibilityRole="button"
               accessibilityState={{ selected }}
             >
-              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{level}</Text>
+              <Text
+                style={[
+                  styles.chipText,
+                  { color: palette.chipText },
+                  selected && styles.chipTextSelected,
+                ]}
+              >
+                {level}
+              </Text>
             </Pressable>
           );
         })}
       </View>
 
-      <Text style={styles.label}>Años de experiencia</Text>
+      <Text style={[styles.label, { color: palette.label }]}>Años de experiencia</Text>
       <View style={styles.stepper}>
         <Pressable
           onPress={() => setExperienceYears((value) => Math.max(0, value - 1))}
-          style={styles.stepperButton}
+          style={[
+            styles.stepperButton,
+            { borderColor: palette.chipBorder, backgroundColor: palette.chipBackground },
+          ]}
           accessibilityRole="button"
           accessibilityLabel="Restar un año"
         >
-          <Text style={styles.stepperButtonText}>−</Text>
+          <Text style={[styles.stepperButtonText, { color: palette.accent }]}>−</Text>
         </Pressable>
-        <Text style={styles.stepperValue}>{experienceYears}</Text>
+        <Text style={[styles.stepperValue, { color: palette.valueText }]}>{experienceYears}</Text>
         <Pressable
           onPress={() => setExperienceYears((value) => value + 1)}
-          style={styles.stepperButton}
+          style={[
+            styles.stepperButton,
+            { borderColor: palette.chipBorder, backgroundColor: palette.chipBackground },
+          ]}
           accessibilityRole="button"
           accessibilityLabel="Sumar un año"
         >
-          <Text style={styles.stepperButtonText}>+</Text>
+          <Text style={[styles.stepperButtonText, { color: palette.accent }]}>+</Text>
         </Pressable>
       </View>
 
-      <Text style={styles.label}>Ubicación</Text>
+      <Text style={[styles.label, { color: palette.label }]}>Ubicación</Text>
       <TextInput
         value={locationText}
         onChangeText={setLocationText}
         placeholder="Ej. Monterrey, México"
-        placeholderTextColor={theme.colors.textMuted}
-        style={styles.input}
+        placeholderTextColor={palette.placeholder}
+        style={[
+          styles.input,
+          {
+            borderColor: palette.chipBorder,
+            backgroundColor: palette.inputBackground,
+            color: palette.valueText,
+          },
+        ]}
       />
 
       <Pressable
@@ -141,13 +187,34 @@ export function ProfileForm({ initialProfile, submitLabel, onSubmit }: ProfileFo
         style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
         accessibilityRole="button"
       >
-        <Text style={styles.submitButtonText}>
-          {isSubmitting ? 'Guardando…' : submitLabel}
-        </Text>
+        <Text style={styles.submitButtonText}>{isSubmitting ? 'Guardando…' : submitLabel}</Text>
       </Pressable>
     </View>
   );
 }
+
+const palettes = {
+  light: {
+    label: theme.colors.text,
+    chipBorder: theme.colors.border,
+    chipBackground: theme.colors.surface,
+    chipText: theme.colors.textSecondary,
+    inputBackground: theme.colors.surface,
+    valueText: theme.colors.text,
+    placeholder: theme.colors.textMuted,
+    accent: theme.colors.primary,
+  },
+  dark: {
+    label: '#E5E7EB',
+    chipBorder: '#374151',
+    chipBackground: '#111827',
+    chipText: '#D1D5DB',
+    inputBackground: '#111827',
+    valueText: '#F9FAFB',
+    placeholder: '#6B7280',
+    accent: '#818CF8',
+  },
+} as const;
 
 const styles = StyleSheet.create({
   container: {
@@ -157,7 +224,6 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     fontSize: theme.fontSize.sm,
     fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.text,
   },
   chips: {
     flexDirection: 'row',
@@ -169,8 +235,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
   },
   chipSelected: {
     backgroundColor: theme.colors.primary,
@@ -178,7 +242,6 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
     fontWeight: theme.fontWeight.medium,
   },
   chipTextSelected: {
@@ -194,32 +257,25 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepperButtonText: {
     fontSize: theme.fontSize.xl,
-    color: theme.colors.primary,
     fontWeight: theme.fontWeight.semibold,
   },
   stepperValue: {
     fontSize: theme.fontSize.xl,
     fontWeight: theme.fontWeight.bold,
-    color: theme.colors.text,
     minWidth: 32,
     textAlign: 'center',
   },
   input: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surface,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     fontSize: theme.fontSize.md,
-    color: theme.colors.text,
   },
   submitButton: {
     marginTop: theme.spacing.xl,

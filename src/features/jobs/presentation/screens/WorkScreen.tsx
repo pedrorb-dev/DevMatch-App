@@ -84,6 +84,16 @@ export function WorkScreen({ jobId }: WorkScreenProps) {
         ))}
       </View>
 
+        <Pressable
+        onPress={() => {
+          void Linking.openURL(job.url);
+        }}
+        style={styles.primaryButton}
+        accessibilityRole="button"
+      >
+        <Text style={styles.primaryButtonText}>Ver oferta original</Text>
+      </Pressable>
+
       <Pressable
         onPress={() => toggleFavorite(job.id)}
         style={[styles.secondaryButton, favorite && styles.secondaryButtonActive]}
@@ -101,15 +111,7 @@ export function WorkScreen({ jobId }: WorkScreenProps) {
         </Text>
       </Pressable>
 
-      <Pressable
-        onPress={() => {
-          void Linking.openURL(job.url);
-        }}
-        style={styles.primaryButton}
-        accessibilityRole="button"
-      >
-        <Text style={styles.primaryButtonText}>Ver oferta original</Text>
-      </Pressable>
+      
     </ScrollView>
   );
 }

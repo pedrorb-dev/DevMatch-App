@@ -1,43 +1,37 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import { consumePendingEditRequest, onEditProfileRequest } from '@/core/devmenu/devMenu';
 import { theme } from '@/core/theme/theme';
 
 import type { UserProfile } from '../../domain/entities/UserProfile';
-import { ProfileForm } from '../components/ProfileForm';
+import { ProfileDevMenu } from '../components/ProfileDevMenu';
 import { useProfile } from '../context/ProfileContext';
 
 export function ProfileScreen() {
   const router = useRouter();
   const { profile, saveProfile, clearProfile } = useProfile();
-  const [isEditing, setIsEditing] = useState(false);
+  const [isDevMenuOpen, setIsDevMenuOpen] = useState(false);
 
-  useEffect(() => {
-    if (consumePendingEditRequest()) {
-      setIsEditing(true);
-    }
-
-    return onEditProfileRequest(() => setIsEditing(true));
-  }, []);
-
-  const handleSave = async (next: UserProfile) => {
-    await saveProfile(next);
-    setIsEditing(false);
-  };
+  const openDevMenuGesture = Gesture.LongPress()
+    .numberOfPointers(3)
+    .minDuration(1000)
+    .onEnd((_event, success) => {
+      if (success && profile) {
+        setIsDevMenuOpen(true);
+      }
+    })
+    .runOnJS(true);
 
   const handleClear = async () => {
     await clearProfile();
     router.replace('/onboarding');
+  };
+
+  const handleDevMenuSubmit = async (next: UserProfile) => {
+    await saveProfile(next);
+    setIsDevMenuOpen(false);
   };
 
   if (!profile) {
@@ -48,63 +42,51 @@ export function ProfileScreen() {
     );
   }
 
-  if (isEditing) {
-    return (
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.editTitle}>Editar perfil</Text>
+  return (
+    <GestureDetector gesture={openDevMenuGesture}>
+      <View style={styles.container}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+          <View style={styles.card}>
+            <Text style={styles.label}>Stack</Text>
+            <View style={styles.stackRow}>
+              {profile.stack.map((tech) => (
+                <View key={tech} style={styles.techChip}>
+                  <Text style={styles.techText}>{tech}</Text>
+                </View>
+              ))}
+            </View>
 
-          <ProfileForm initialProfile={profile} submitLabel="Guardar cambios" onSubmit={handleSave} />
+            <Text style={styles.label}>Experiencia</Text>
+            <Text style={styles.value}>{profile.experienceYears} años</Text>
+
+            <Text style={styles.label}>Inglés</Text>
+            <Text style={styles.value}>{profile.englishLevel}</Text>
+
+            <Text style={styles.label}>Ubicación</Text>
+            <Text style={styles.value}>{profile.locationText}</Text>
+          </View>
 
           <Pressable
-            style={styles.secondaryButton}
-            onPress={() => setIsEditing(false)}
+            style={styles.primaryButton}
+            onPress={() => router.push('/onboarding')}
             accessibilityRole="button"
           >
-            <Text style={styles.secondaryButtonText}>Cancelar</Text>
+            <Text style={styles.primaryButtonText}>Editar perfil</Text>
+          </Pressable>
+
+          <Pressable style={styles.dangerButton} onPress={handleClear} accessibilityRole="button">
+            <Text style={styles.dangerButtonText}>Borrar perfil</Text>
           </Pressable>
         </ScrollView>
-      </KeyboardAvoidingView>
-    );
-  }
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.card}>
-        <Text style={styles.label}>Stack</Text>
-        <View style={styles.stackRow}>
-          {profile.stack.map((tech) => (
-            <View key={tech} style={styles.techChip}>
-              <Text style={styles.techText}>{tech}</Text>
-            </View>
-          ))}
-        </View>
-
-        <Text style={styles.label}>Experiencia</Text>
-        <Text style={styles.value}>{profile.experienceYears} años</Text>
-
-        <Text style={styles.label}>Inglés</Text>
-        <Text style={styles.value}>{profile.englishLevel}</Text>
-
-        <Text style={styles.label}>Ubicación</Text>
-        <Text style={styles.value}>{profile.locationText}</Text>
+        <ProfileDevMenu
+          visible={isDevMenuOpen}
+          initialProfile={profile}
+          onSubmit={handleDevMenuSubmit}
+          onClose={() => setIsDevMenuOpen(false)}
+        />
       </View>
-
-      <Pressable
-        style={styles.primaryButton}
-        onPress={() => router.push('/onboarding')}
-        accessibilityRole="button"
-      >
-        <Text style={styles.primaryButtonText}>Editar perfil</Text>
-      </Pressable>
-
-      <Pressable style={styles.dangerButton} onPress={handleClear} accessibilityRole="button">
-        <Text style={styles.dangerButtonText}>Borrar perfil</Text>
-      </Pressable>
-    </ScrollView>
+    </GestureDetector>
   );
 }
 
@@ -182,19 +164,5 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.sm,
     fontWeight: theme.fontWeight.medium,
     color: theme.colors.danger,
-  },
-  editTitle: {
-    fontSize: theme.fontSize.xl,
-    fontWeight: theme.fontWeight.bold,
-    color: theme.colors.text,
-  },
-  secondaryButton: {
-    paddingVertical: theme.spacing.md,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    fontSize: theme.fontSize.sm,
-    fontWeight: theme.fontWeight.medium,
-    color: theme.colors.textSecondary,
   },
 });
