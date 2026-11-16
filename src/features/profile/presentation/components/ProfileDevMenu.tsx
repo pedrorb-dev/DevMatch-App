@@ -6,6 +6,7 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -24,12 +25,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
-
-import { theme } from '@/core/theme/theme';
+import { useTheme } from '@/core/theme/ThemeContext';
 
 import type { UserProfile } from '../../domain/entities/UserProfile';
 import { ProfileForm } from './ProfileForm';
+
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const CLOSE_THRESHOLD = 140;
@@ -43,6 +44,7 @@ interface ProfileDevMenuProps {
 }
 
 export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: ProfileDevMenuProps) {
+  const { colors, isDark, toggleMode, spacing, fontSize, fontWeight } = useTheme();
   const translateY = useSharedValue(0);
   const scrollY = useSharedValue(0);
   const sheetHeight = useSharedValue(SCREEN_HEIGHT);
@@ -123,13 +125,13 @@ export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: P
           >
             <GestureDetector gesture={composedGesture}>
               <Animated.View
-                style={[styles.sheet, sheetAnimatedStyle]}
+                style={[styles.sheet, { backgroundColor: colors.surface }, sheetAnimatedStyle]}
                 onLayout={(event) => {
                   sheetHeight.value = event.nativeEvent.layout.height;
                 }}
               >
-                <View style={styles.handle} />
-                <Text style={styles.title}>Editar perfil</Text>
+                <View style={[styles.handle, { backgroundColor: colors.border }]} />
+                <Text style={[styles.title, { color: colors.text }]}>Editar perfil</Text>
 
                 <AnimatedScrollView
                   contentContainerStyle={styles.content}
@@ -139,16 +141,40 @@ export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: P
                   scrollEventThrottle={16}
                   bounces={false}
                 >
+                  <View
+                    style={[
+                      styles.themeRow,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.background,
+                        marginTop: spacing.sm,
+                        marginBottom: spacing.md,
+                      },
+                    ]}
+                  >
+                    <View style={styles.themeRowText}>
+                      <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text }}>
+                        Modo oscuro
+                      </Text>
+                    </View>
+                    <Switch
+                      value={isDark}
+                      onValueChange={toggleMode}
+                      trackColor={{ false: colors.border, true: colors.primary }}
+                      thumbColor={colors.white}
+                      accessibilityRole="switch"
+                      accessibilityLabel="Modo oscuro"
+                    />
+                  </View>
+
                   <ProfileForm
                     initialProfile={initialProfile}
                     submitLabel="Guardar"
                     onSubmit={onSubmit}
-                    // variant="dark"
-                    variant="light"
                   />
 
                   <Pressable style={styles.cancelButton} onPress={onClose} accessibilityRole="button">
-                    <Text style={styles.cancelButtonText}>Cancelar</Text>
+                    <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>Cancelar</Text>
                   </Pressable>
                 </AnimatedScrollView>
               </Animated.View>
@@ -181,8 +207,6 @@ const styles = StyleSheet.create({
     maxHeight: '92%',
   },
   sheet: {
-    // backgroundColor: '#0B0F1A',
-    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 12,
@@ -194,19 +218,28 @@ const styles = StyleSheet.create({
     width: 44,
     height: 5,
     borderRadius: 999,
-    // backgroundColor: '#374151',
-    backgroundColor: theme.colors.border,
     marginBottom: 12,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    // color: '#F9FAFB',
-    color: theme.colors.text,
     marginBottom: 4,
   },
   content: {
     paddingBottom: 24,
+  },
+  themeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderWidth: 1,
+    borderRadius: 12,
+    gap: 12,
+  },
+  themeRowText: {
+    flex: 1,
+    gap: 2,
   },
   cancelButton: {
     marginTop: 8,
@@ -216,7 +249,5 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    // color: '#9CA3AF',
-    color: theme.colors.textSecondary,
   },
 });

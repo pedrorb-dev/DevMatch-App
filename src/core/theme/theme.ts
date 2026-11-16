@@ -1,8 +1,9 @@
-export const colors = {
+export const lightColors = {
   // Marca
   primary: '#4B0082',
   primaryDark: '#330057',
   primaryLight: '#EEF2FF',
+  primaryText: '#4B0082',
 
   // Superficies
   background: '#F8FAFC',
@@ -20,6 +21,32 @@ export const colors = {
   warning: '#F59E0B',
   white: '#FFFFFF',
 } as const;
+
+export const darkColors = {
+  // Marca
+  primary: '#4B0082',
+  primaryDark: '#330057',
+  primaryLight: '#1E1B4B',
+  primaryText: '#A78BFA',
+
+  // Superficies
+  background: '#0F172A',
+  surface: '#0B0F1A',
+
+  // Texto
+  text: '#F9FAFB',
+  textSecondary: '#9CA3AF',
+  textMuted: '#6B7280',
+
+  // Bordes y estados
+  border: '#374151',
+  danger: '#F87171',
+  success: '#22C55E',
+  warning: '#F59E0B',
+  white: '#F9FAFB',
+} as const;
+
+export type ThemeColors = { [K in keyof typeof lightColors]: string };
 
 export const spacing = {
   xs: 4,
@@ -53,12 +80,21 @@ export const fontWeight = {
   bold: '700',
 } as const;
 
-export const theme = {
+export type ThemeMode = 'light' | 'dark';
+
+export const createTheme = (colors: ThemeColors) => ({
   colors,
   spacing,
   radius,
   fontSize,
   fontWeight,
-} as const;
+});
 
-export type Theme = typeof theme;
+export type AppTheme = ReturnType<typeof createTheme>;
+
+export const lightTheme = createTheme(lightColors);
+export const darkTheme = createTheme(darkColors);
+
+// Compatibilidad temporal
+export const theme = lightTheme;
+export type Theme = AppTheme;

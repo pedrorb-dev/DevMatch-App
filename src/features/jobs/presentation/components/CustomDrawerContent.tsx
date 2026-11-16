@@ -3,7 +3,7 @@ import { DrawerContentScrollView, type DrawerContentComponentProps } from 'expo-
 import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { theme } from '@/core/theme/theme';
+import { useTheme } from '@/core/theme/ThemeContext';
 import { useProfile } from '@/features/profile/presentation/context/ProfileContext';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
@@ -16,6 +16,7 @@ const MENU_ITEMS: { route: string; label: string; icon: IoniconName }[] = [
 
 export function CustomDrawerContent(props: DrawerContentComponentProps) {
   const { profile } = useProfile();
+  const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const activeRoute = props.state.routes[props.state.index]?.name;
 
   const goTo = (route: string) => {
@@ -24,39 +25,68 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
   };
 
   return (
-    <DrawerContentScrollView {...props} contentContainerStyle={styles.scroll}>
-      {<View style={styles.profileCard}>
-        <Text style={styles.profileTitle}>Mi perfil</Text>
+    <DrawerContentScrollView
+      {...props}
+      contentContainerStyle={[styles.scroll, { backgroundColor: colors.surface }]}
+    >
+      <View
+        style={{
+          margin: spacing.lg,
+          padding: spacing.lg,
+          borderRadius: radius.lg,
+          backgroundColor: colors.primaryLight,
+          gap: spacing.xs,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: fontSize.sm,
+            fontWeight: fontWeight.semibold,
+            color: colors.primaryText,
+            textTransform: 'uppercase',
+          }}
+        >
+          Mi perfil
+        </Text>
         {profile ? (
-          <>
-          {/*<Text style={styles.profileStack} numberOfLines={2}>
-              {profile.stack.join(' - ')}
-            </Text>
-            <Text style={styles.profileMeta}>
-              {profile.experienceYears} años - Inglés {profile.englishLevel}
-            </Text>
-            <Text style={styles.profileMeta}>{profile.locationText}</Text>*/}
-          </>
+          <></>
         ) : (
-          <Text style={styles.profileMeta}>Perfil sin configurar</Text>
+          <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary }}>
+            Perfil sin configurar
+          </Text>
         )}
-      </View>}
+      </View>
 
-      <View style={styles.menu}>
+      <View style={{ paddingHorizontal: spacing.sm, gap: spacing.xs }}>
         {MENU_ITEMS.map((item) => {
           const isActive = activeRoute === item.route;
           return (
             <Pressable
               key={item.route}
               onPress={() => goTo(item.route)}
-              style={[styles.menuItem, isActive && styles.menuItemActive]}
+              style={[
+                styles.menuItem,
+                {
+                  gap: spacing.md,
+                  paddingVertical: spacing.md,
+                  paddingHorizontal: spacing.lg,
+                  borderRadius: radius.md,
+                  backgroundColor: isActive ? colors.primaryLight : 'transparent',
+                },
+              ]}
             >
               <Ionicons
                 name={item.icon}
                 size={20}
-                color={isActive ? theme.colors.primary : theme.colors.textSecondary}
+                color={isActive ? colors.primaryText : colors.textSecondary}
               />
-              <Text style={[styles.menuLabel, isActive && styles.menuLabelActive]}>
+              <Text
+                style={{
+                  fontSize: fontSize.md,
+                  color: isActive ? colors.primaryText : colors.textSecondary,
+                  fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
+                }}
+              >
                 {item.label}
               </Text>
             </Pressable>
@@ -70,52 +100,9 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
-    backgroundColor: theme.colors.surface,
-  },
-  profileCard: {
-    margin: theme.spacing.lg,
-    padding: theme.spacing.lg,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.primaryLight,
-    gap: theme.spacing.xs,
-  },
-  profileTitle: {
-    fontSize: theme.fontSize.sm,
-    fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.primary,
-    textTransform: 'uppercase',
-  },
-  profileStack: {
-    fontSize: theme.fontSize.md,
-    fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.text,
-  },
-  profileMeta: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
-  },
-  menu: {
-    paddingHorizontal: theme.spacing.sm,
-    gap: theme.spacing.xs,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.radius.md,
-  },
-  menuItemActive: {
-    backgroundColor: theme.colors.primaryLight,
-  },
-  menuLabel: {
-    fontSize: theme.fontSize.md,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.fontWeight.medium,
-  },
-  menuLabelActive: {
-    color: theme.colors.primary,
-    fontWeight: theme.fontWeight.semibold,
   },
 });

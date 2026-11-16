@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { theme } from '@/core/theme/theme';
+import { useTheme } from '@/core/theme/ThemeContext';
 import type { JobOffer } from '../../domain/entities/JobOffer';
 import { useFavorites } from '../context/FavoritesContext';
 import { ModalityBadge } from './ModalityBadge';
@@ -14,11 +14,32 @@ interface JobCardProps {
 export function JobCard({ job, onPress }: JobCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const favorite = isFavorite(job.id);
+  const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
 
   return (
-    <Pressable onPress={onPress} style={styles.card}>
-      <View style={styles.header}>
-        <Text style={styles.title} numberOfLines={2}>
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.surface,
+          borderRadius: radius.lg,
+          padding: spacing.lg,
+          gap: spacing.sm,
+          borderColor: colors.border,
+        },
+      ]}
+    >
+      <View style={[styles.header, { gap: spacing.sm }]}>
+        <Text
+          style={{
+            flex: 1,
+            fontSize: fontSize.lg,
+            fontWeight: fontWeight.semibold,
+            color: colors.text,
+          }}
+          numberOfLines={2}
+        >
           {job.title}
         </Text>
         <Pressable
@@ -26,23 +47,31 @@ export function JobCard({ job, onPress }: JobCardProps) {
           hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel={favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'}
-          style={styles.favoriteButton}
+          style={{ padding: spacing.xs }}
         >
           <Ionicons
             name={favorite ? 'bookmark' : 'bookmark-outline'}
             size={22}
-            color={favorite ? theme.colors.primary : theme.colors.textMuted}
+            color={favorite ? colors.primaryText : colors.textMuted}
           />
         </Pressable>
       </View>
 
-      <Text style={styles.company} numberOfLines={1}>
+      <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary }} numberOfLines={1}>
         {job.company}
       </Text>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { gap: spacing.sm, marginTop: spacing.xs }]}>
         <ModalityBadge modality={job.modality} />
-        <Text style={styles.location} numberOfLines={1}>
+        <Text
+          style={{
+            flex: 1,
+            textAlign: 'right',
+            fontSize: fontSize.sm,
+            color: colors.textSecondary,
+          }}
+          numberOfLines={1}
+        >
           {job.locationText}
         </Text>
       </View>
@@ -52,42 +81,15 @@ export function JobCard({ job, onPress }: JobCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.lg,
-    gap: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: theme.spacing.sm,
-  },
-  title: {
-    flex: 1,
-    fontSize: theme.fontSize.lg,
-    fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.text,
-  },
-  favoriteButton: {
-    padding: theme.spacing.xs,
-  },
-  company: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.xs,
-  },
-  location: {
-    flex: 1,
-    textAlign: 'right',
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
   },
 });

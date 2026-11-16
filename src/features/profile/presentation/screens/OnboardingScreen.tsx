@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from 'react-native';
 
-import { theme } from '@/core/theme/theme';
+import { useTheme } from '@/core/theme/ThemeContext';
 
 import type { UserProfile } from '../../domain/entities/UserProfile';
 import { ProfileForm } from '../components/ProfileForm';
@@ -10,6 +10,7 @@ import { useProfile } from '../context/ProfileContext';
 export function OnboardingScreen() {
   const router = useRouter();
   const { profile, saveProfile } = useProfile();
+  const { colors, spacing, fontSize, fontWeight } = useTheme();
 
   const handleSave = async (next: UserProfile) => {
     await saveProfile(next);
@@ -18,12 +19,27 @@ export function OnboardingScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Configura tu perfil</Text>
-        <Text style={styles.subtitle}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: spacing.lg,
+          gap: spacing.sm,
+          paddingBottom: spacing.xxl,
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={{ fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.text }}>
+          Configura tu perfil
+        </Text>
+        <Text
+          style={{
+            fontSize: fontSize.sm,
+            color: colors.textSecondary,
+            marginBottom: spacing.sm,
+          }}
+        >
           Cuéntanos tu stack y experiencia para personalizar las vacantes.
         </Text>
 
@@ -36,21 +52,5 @@ export function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  content: {
-    padding: theme.spacing.lg,
-    gap: theme.spacing.sm,
-    paddingBottom: theme.spacing.xxl,
-  },
-  title: {
-    fontSize: theme.fontSize.xxl,
-    fontWeight: theme.fontWeight.bold,
-    color: theme.colors.text,
-  },
-  subtitle: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
   },
 });

@@ -1,18 +1,20 @@
 import { Drawer } from 'expo-router/drawer';
 
-import { theme } from '@/core/theme/theme';
+import { useTheme } from '@/core/theme/ThemeContext';
 import { CustomDrawerContent } from '@/features/jobs/presentation/components/CustomDrawerContent';
 
 export default function DrawerLayout() {
+  const { colors } = useTheme();
+
   return (
     <Drawer
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
-        headerTintColor: theme.colors.text,
-        headerStyle: { backgroundColor: theme.colors.surface },
-        drawerActiveTintColor: theme.colors.primary,
-        drawerInactiveTintColor: theme.colors.textSecondary,
-        sceneStyle: { backgroundColor: theme.colors.background },
+        headerTintColor: colors.text,
+        headerStyle: { backgroundColor: colors.surface },
+        drawerActiveTintColor: colors.primary,
+        drawerInactiveTintColor: colors.textSecondary,
+        sceneStyle: { backgroundColor: colors.background },
       }}
     >
       <Drawer.Screen name="feed" options={{ title: 'Inicio' }} />

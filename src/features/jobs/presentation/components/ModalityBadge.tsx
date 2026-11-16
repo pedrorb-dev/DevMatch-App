@@ -1,40 +1,53 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { theme } from '@/core/theme/theme';
+import { useTheme } from '@/core/theme/ThemeContext';
 import type { WorkModality } from '../../domain/types';
-
-const badgeBackground: Record<WorkModality, string> = {
-  Remoto: '#DCFCE7',
-  Híbrido: '#FEF3C7',
-  Presencial: theme.colors.primaryLight,
-};
-
-const badgeTextColor: Record<WorkModality, string> = {
-  Remoto: '#166534',
-  Híbrido: '#92400E',
-  Presencial: theme.colors.primary,
-};
 
 interface ModalityBadgeProps {
   modality: WorkModality;
 }
 
 export function ModalityBadge({ modality }: ModalityBadgeProps) {
+  const { colors, spacing, radius, fontSize, fontWeight, isDark } = useTheme();
+
+  const badgeBackground: Record<WorkModality, string> = {
+    Remoto: isDark ? '#14532D' : '#DCFCE7',
+    Híbrido: isDark ? '#78350F' : '#FEF3C7',
+    Presencial: colors.primaryLight,
+  };
+
+  const badgeTextColor: Record<WorkModality, string> = {
+    Remoto: isDark ? '#86EFAC' : '#166534',
+    Híbrido: isDark ? '#FCD34D' : '#92400E',
+    Presencial: colors.primaryText,
+  };
+
   return (
-    <View style={[styles.badge, {/*{ backgroundColor: badgeBackground[modality] }*/}]}>
-      <Text style={[styles.text, {/*{ color: badgeTextColor[modality] }*/}]}>{modality}</Text>
+    <View
+      style={[
+        styles.badge,
+        {
+          paddingVertical: spacing.xs,
+          paddingHorizontal: spacing.sm,
+          borderRadius: radius.full,
+          /*backgroundColor: badgeBackground[modality],*/
+        },
+      ]}
+    >
+      <Text
+        style={{
+          fontSize: fontSize.xs,
+          fontWeight: fontWeight.semibold,
+          color: colors.textSecondary,
+          /*color: badgeTextColor[modality],*/
+        }}
+      >
+        {modality}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  badge: {
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    borderRadius: theme.radius.full,
-  },
-  text: {
-    fontSize: theme.fontSize.xs,
-    fontWeight: theme.fontWeight.semibold,
-  },
+  badge: {},
 });

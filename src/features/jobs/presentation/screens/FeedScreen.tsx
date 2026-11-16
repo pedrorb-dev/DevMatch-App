@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 
-import { theme } from '@/core/theme/theme';
+import { useTheme } from '@/core/theme/ThemeContext';
 import { JobCard } from '../components/JobCard';
 import { useJobs } from '../hooks/useJobs';
 
@@ -46,6 +46,7 @@ const isCreatedOnDay = (isoDate: string, daysAgo: number, now: Date): boolean =>
 export function FeedScreen() {
   const router = useRouter();
   const { jobs, isLoading, error } = useJobs();
+  const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const [selectedDaysAgo, setSelectedDaysAgo] = useState<number | null>(null);
 
   const visibleJobs = useMemo(() => {
@@ -56,35 +57,56 @@ export function FeedScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={theme.colors.primary} />
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.error}>{error}</Text>
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <Text style={{ fontSize: fontSize.sm, color: colors.danger }}>{error}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.chipsScroll}
-        contentContainerStyle={styles.chipsRow}
+        contentContainerStyle={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: spacing.lg,
+          paddingVertical: spacing.md,
+          gap: spacing.sm,
+        }}
       >
         <Pressable
           onPress={() => setSelectedDaysAgo(null)}
-          style={[styles.chip, selectedDaysAgo === null && styles.chipActive]}
+          style={[
+            styles.chip,
+            {
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.lg,
+              borderRadius: radius.full,
+              borderColor: selectedDaysAgo === null ? colors.primary : colors.border,
+              backgroundColor: selectedDaysAgo === null ? colors.primary : colors.surface,
+            },
+          ]}
           accessibilityRole="button"
           accessibilityState={{ selected: selectedDaysAgo === null }}
         >
-          <Text style={[styles.chipText, selectedDaysAgo === null && styles.chipTextActive]}>
+          <Text
+            style={{
+              fontSize: fontSize.sm,
+              fontWeight: fontWeight.medium,
+              color: selectedDaysAgo === null ? colors.white : colors.textSecondary,
+            }}
+          >
             Todos
           </Text>
         </Pressable>
@@ -95,11 +117,28 @@ export function FeedScreen() {
             <Pressable
               key={daysAgo}
               onPress={() => setSelectedDaysAgo(daysAgo)}
-              style={[styles.chip, isActive && styles.chipActive]}
+              style={[
+                styles.chip,
+                {
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.lg,
+                  borderRadius: radius.full,
+                  borderColor: isActive ? colors.primary : colors.border,
+                  backgroundColor: isActive ? colors.primary : colors.surface,
+                },
+              ]}
               accessibilityRole="button"
               accessibilityState={{ selected: isActive }}
             >
-              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{label}</Text>
+              <Text
+                style={{
+                  fontSize: fontSize.sm,
+                  fontWeight: fontWeight.medium,
+                  color: isActive ? colors.white : colors.textSecondary,
+                }}
+              >
+                {label}
+              </Text>
             </Pressable>
           );
         })}
@@ -108,12 +147,25 @@ export function FeedScreen() {
       <FlatList
         data={visibleJobs}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.lg,
+          paddingBottom: spacing.xl,
+          gap: spacing.md,
+        }}
         renderItem={({ item }) => (
           <JobCard job={item} onPress={() => router.push(`/work/${item.id}`)} />
         )}
         ListEmptyComponent={
-          <Text style={styles.empty}>No hay vacantes para este filtro.</Text>
+          <Text
+            style={{
+              textAlign: 'center',
+              marginTop: spacing.xl,
+              fontSize: fontSize.sm,
+              color: colors.textSecondary,
+            }}
+          >
+            No hay vacantes para este filtro.
+          </Text>
         }
       />
     </View>
@@ -123,57 +175,16 @@ export function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.background,
-  },
-  error: {
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.danger,
   },
   chipsScroll: {
     flexGrow: 0,
   },
-  chipsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
   chip: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  chipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  chipText: {
-    fontSize: theme.fontSize.sm,
-    fontWeight: theme.fontWeight.medium,
-    color: theme.colors.textSecondary,
-  },
-  chipTextActive: {
-    color: theme.colors.white,
-  },
-  listContent: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
-    gap: theme.spacing.md,
-  },
-  empty: {
-    textAlign: 'center',
-    marginTop: theme.spacing.xl,
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
   },
 });
