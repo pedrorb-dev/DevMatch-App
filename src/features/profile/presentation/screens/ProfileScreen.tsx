@@ -1,12 +1,44 @@
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
+import { consumePendingEditRequest, onEditProfileRequest } from '@/core/devmenu/devMenu';
 import { theme } from '@/core/theme/theme';
+
+import type { UserProfile } from '../../domain/entities/UserProfile';
+import { ProfileForm } from '../components/ProfileForm';
 import { useProfile } from '../context/ProfileContext';
 
 export function ProfileScreen() {
   const router = useRouter();
-  const { profile, clearProfile } = useProfile();
+  const { profile, saveProfile, clearProfile } = useProfile();
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (consumePendingEditRequest()) {
+      setIsEditing(true);
+    }
+
+    return onEditProfileRequest(() => setIsEditing(true));
+  }, []);
+
+  const handleSave = async (next: UserProfile) => {
+    await saveProfile(next);
+    setIsEditing(false);
+  };
+
+  const handleClear = async () => {
+    await clearProfile();
+    router.replace('/onboarding');
+  };
 
   if (!profile) {
     return (
@@ -16,10 +48,28 @@ export function ProfileScreen() {
     );
   }
 
-  const handleClear = async () => {
-    await clearProfile();
-    router.replace('/onboarding');
-  };
+  if (isEditing) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Text style={styles.editTitle}>Editar perfil</Text>
+
+          <ProfileForm initialProfile={profile} submitLabel="Guardar cambios" onSubmit={handleSave} />
+
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => setIsEditing(false)}
+            accessibilityRole="button"
+          >
+            <Text style={styles.secondaryButtonText}>Cancelar</Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -66,6 +116,7 @@ const styles = StyleSheet.create({
   content: {
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
+    paddingBottom: theme.spacing.xxl,
   },
   centered: {
     flex: 1,
@@ -131,5 +182,19 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.sm,
     fontWeight: theme.fontWeight.medium,
     color: theme.colors.danger,
+  },
+  editTitle: {
+    fontSize: theme.fontSize.xl,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
+  },
+  secondaryButton: {
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    fontSize: theme.fontSize.sm,
+    fontWeight: theme.fontWeight.medium,
+    color: theme.colors.textSecondary,
   },
 });
