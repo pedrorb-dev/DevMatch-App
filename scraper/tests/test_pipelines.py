@@ -251,6 +251,50 @@ def test_modalidad_desde_casa_en_ubicacion_es_remoto():
     assert enriched["modalidad"] == "Remoto"
 
 
+# --- nivel_ingles -----------------------------------------------------------
+
+
+def detect_ingles(titulo, descripcion=""):
+    item = JobOfferItem(
+        titulo=titulo,
+        empresa="ACME",
+        modalidad_raw="",
+        ubicacion_texto="",
+        descripcion=descripcion,
+        tags_tecnologias=[],
+        url_oferta="https://example.com/empleo/1",
+    )
+    return run_enrichment(run_cleaning(item))["nivel_ingles"]
+
+
+@pytest.mark.parametrize(
+    ("titulo", "descripcion"),
+    [
+        ("Desarrollador Java", "English required para integrarse al equipo."),
+        ("Desarrollador Java", "Inglés requerido."),
+        ("Backend Developer", "Requisitos:\n- Inglés requerido\n- Java"),
+        ("Backend Developer", "Requirements:\n- English required\n- Java"),
+    ],
+)
+def test_nivel_ingles_english_required_es_b1(titulo, descripcion):
+    assert detect_ingles(titulo, descripcion) == "B1"
+
+
+@pytest.mark.parametrize(
+    ("descripcion", "expected"),
+    [
+        # Las menciones explícitas de nivel mantienen su precedencia.
+        ("English required. Advanced English level.", "B2"),
+        ("Inglés requerido. Nivel avanzado de inglés.", "B2"),
+        ("English required. Bilingual candidate.", "C1"),
+        ("Inglés requerido. Nativo.", "C1"),
+        ("English required. Intermediate level.", "B1"),
+    ],
+)
+def test_nivel_ingles_english_required_no_rompe_precedencias(descripcion, expected):
+    assert detect_ingles("Desarrollador Java", descripcion) == expected
+
+
 # --- url_oferta canónica (sin fragmento ni query params) -------------------
 
 

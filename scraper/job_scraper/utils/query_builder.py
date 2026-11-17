@@ -8,10 +8,12 @@ from supabase import create_client
 HIRELINE_BASE = "https://hireline.io"
 OCC_BASE = "https://www.occ.com.mx"
 COMPUTRABAJO_BASE = "https://mx.computrabajo.com"
+GETONBRD_BASE = "https://www.getonbrd.com"
 
 HIRELINE_PLATFORM = "hireline"
 OCC_PLATFORM = "occ"
 COMPUTRABAJO_PLATFORM = "computrabajo"
+GETONBRD_PLATFORM = "getonbrd"
 
 
 def _strip_accents(text):
@@ -90,6 +92,45 @@ OCC_STACK_SLUGS = {
 # Slugs de Computrabajo para los mismos stacks canónicos. Mismos valores que
 # `OCC_STACK_SLUGS`; el resto se resuelve con `_slugify`.
 COMPUTRABAJO_STACK_SLUGS = {
+    "spring boot": "spring-boot",
+    "angular": "angular",
+    "react": "react",
+    "vue": "vue",
+    "java": "java",
+    "javascript": "javascript",
+    "typescript": "typescript",
+    "python": "python",
+    "sql": "sql",
+    "postgresql": "postgresql",
+    "mysql": "mysql",
+    "mongodb": "mongodb",
+    "docker": "docker",
+    "kubernetes": "kubernetes",
+    "aws": "aws",
+    "azure": "azure",
+    "gcp": "gcp",
+    "node.js": "node-js",
+    "django": "django",
+    "flask": "flask",
+    "fastapi": "fastapi",
+    ".net": "dotnet",
+    "c#": "c-sharp",
+    "php": "php",
+    "laravel": "laravel",
+    "ruby": "ruby",
+    "ruby on rails": "ruby-on-rails",
+    "go": "go",
+    "git": "git",
+    "linux": "linux",
+    "redis": "redis",
+    "graphql": "graphql",
+    "rest": "rest",
+}
+
+# Slugs de Get on Board para los mismos stacks canónicos. Mismos valores que
+# `OCC_STACK_SLUGS` / `COMPUTRABAJO_STACK_SLUGS`; el resto se resuelve con
+# `_slugify`.
+GETONBRD_STACK_SLUGS = {
     "spring boot": "spring-boot",
     "angular": "angular",
     "react": "react",
@@ -292,10 +333,12 @@ class SearchQueryBuilder:
             urls = self._build_occ_urls()
         elif platform == COMPUTRABAJO_PLATFORM:
             urls = self._build_computrabajo_urls()
+        elif platform == GETONBRD_PLATFORM:
+            urls = self._build_getonbrd_urls()
         else:
             raise ValueError(
                 f"Plataforma no soportada: {platform!r} "
-                "(usa 'hireline', 'occ' o 'computrabajo')"
+                "(usa 'hireline', 'occ', 'computrabajo' o 'getonbrd')"
             )
         return list(dict.fromkeys(urls))
 
@@ -352,5 +395,19 @@ class SearchQueryBuilder:
             if self.has_senior_level:
                 for route in self.COMPUTRABAJO_SENIOR_SEARCHES:
                     urls.append(f"{COMPUTRABAJO_BASE}{route.format(slug=slug)}")
+
+        return urls
+
+    def _build_getonbrd_urls(self):
+        urls = []
+
+        # Solo `jobs-{slug}` por tecnología: no se diferencia por
+        # `experiencia_anos` (el seniority fino lo hacen `should_follow_job` y
+        # `JobEnrichmentPipeline`) y se evita el doble prefijo `/jobs/`-`/empleos/`.
+        for tech in self.stack:
+            slug = GETONBRD_STACK_SLUGS.get(tech.strip().lower()) or _slugify(tech)
+            if not slug:
+                continue
+            urls.append(f"{GETONBRD_BASE}/jobs-{slug}")
 
         return urls

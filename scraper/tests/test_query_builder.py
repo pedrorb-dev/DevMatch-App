@@ -216,10 +216,86 @@ def test_build_urls_occ_slugs(stack, occ_url):
     assert occ_url in builder.build_urls("occ")
 
 
+# --- Get on Board -----------------------------------------------------------
+
+
+@pytest.mark.parametrize("experiencia_anos", [0, 2, 5])
+def test_build_urls_getonbrd_mismas_urls_por_tecnologia_sin_importar_anos(experiencia_anos):
+    builder = make_builder([{"stack": ["Java", "Python"], "experiencia_anos": experiencia_anos}])
+
+    # Sin rutas de seniority: el mismo conjunto para 0, 2 y 5 años.
+    assert builder.build_urls("getonbrd") == [
+        "https://www.getonbrd.com/jobs-java",
+        "https://www.getonbrd.com/jobs-python",
+    ]
+
+
+def test_build_urls_getonbrd_dedupea_stack_entre_perfiles():
+    builder = make_builder(
+        [
+            {"stack": ["Java"], "experiencia_anos": 0},
+            {"stack": ["Java", "Python"], "experiencia_anos": 2},
+            {"stack": ["Java", "Python"], "experiencia_anos": 5},
+        ]
+    )
+
+    assert builder.build_urls("getonbrd") == [
+        "https://www.getonbrd.com/jobs-java",
+        "https://www.getonbrd.com/jobs-python",
+    ]
+
+
+def test_build_urls_getonbrd_stack_vacio_no_genera_urls():
+    builder = make_builder([{"stack": [], "experiencia_anos": 2}])
+
+    assert builder.build_urls("getonbrd") == []
+
+
+def test_build_urls_getonbrd_sin_perfiles_no_genera_urls():
+    builder = make_builder([])
+
+    assert builder.build_urls("getonbrd") == []
+
+
+@pytest.mark.parametrize(
+    ("stack", "getonbrd_url"),
+    [
+        ("C#", "https://www.getonbrd.com/jobs-c-sharp"),
+        (".NET", "https://www.getonbrd.com/jobs-dotnet"),
+        ("Node.js", "https://www.getonbrd.com/jobs-node-js"),
+        ("Spring Boot", "https://www.getonbrd.com/jobs-spring-boot"),
+        ("React", "https://www.getonbrd.com/jobs-react"),
+        ("Ruby on Rails", "https://www.getonbrd.com/jobs-ruby-on-rails"),
+        # Fallback `_slugify` para tecnologías fuera del mapa canónico.
+        ("Rust", "https://www.getonbrd.com/jobs-rust"),
+        ("Google Cloud", "https://www.getonbrd.com/jobs-google-cloud"),
+    ],
+)
+def test_build_urls_getonbrd_slugs(stack, getonbrd_url):
+    builder = make_builder([{"stack": [stack], "experiencia_anos": 2}])
+
+    assert getonbrd_url in builder.build_urls("getonbrd")
+
+
+def test_build_urls_getonbrd_acepta_stack_como_string():
+    builder = make_builder([{"stack": "Spring Boot", "experiencia_anos": 2}])
+
+    assert builder.build_urls("getonbrd") == [
+        "https://www.getonbrd.com/jobs-spring-boot",
+    ]
+
+
 def test_build_urls_rechaza_plataforma_desconocida():
     builder = make_builder([{"stack": ["Java"], "experiencia_anos": 2}])
 
     with pytest.raises(ValueError):
+        builder.build_urls("linkedin")
+
+
+def test_build_urls_menciona_getonbrd_en_el_error():
+    builder = make_builder([{"stack": ["Java"], "experiencia_anos": 2}])
+
+    with pytest.raises(ValueError, match="getonbrd"):
         builder.build_urls("linkedin")
 
 

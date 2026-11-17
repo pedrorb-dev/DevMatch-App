@@ -1,8 +1,8 @@
 """Run every spider of the project sequentially from a single process.
 
 The daily GitHub Actions workflow invokes this module (``python run_spiders.py``)
-so one run covers every source (Hireline, OCCMundial and Computrabajo) instead
-of separate ``scrapy crawl`` invocations.
+so one run covers every source (Hireline, OCCMundial, Computrabajo and Get on
+Board) instead of separate ``scrapy crawl`` invocations.
 
 ``CrawlerProcess`` is built to run crawlers in parallel, so the next spider is
 only started from the previous crawl's deferred. That keeps the crawls
@@ -19,6 +19,7 @@ from scrapy.utils.project import get_project_settings
 from twisted.python.failure import Failure
 
 from job_scraper.spiders.computrabajo_spider import ComputrabajoSpider
+from job_scraper.spiders.getonbrd_spider import GetOnBrdSpider
 from job_scraper.spiders.hireline_spider import HirelineSpider
 from job_scraper.spiders.occ_spider import OccSpider
 
@@ -29,6 +30,7 @@ SPIDERS = (
     ("hireline", HirelineSpider),
     ("occ", OccSpider),
     ("computrabajo", ComputrabajoSpider),
+    ("getonbrd", GetOnBrdSpider),
 )
 
 

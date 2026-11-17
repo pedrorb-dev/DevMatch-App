@@ -295,8 +295,12 @@ class JobEnrichmentPipeline:
         # B2 / advanced / fluent
         if re.search(r"\bavanzado\b|\badvanced\b|\bfluent\b|\bfluido\b", text):
             return "B2"
-        # B1 / intermediate / conversational
-        if re.search(r"\bintermedio\b|\bintermediate\b|\bconversational\b|\bconversacional\b", text):
+        # B1 / intermediate / conversational / requisito explícito de inglés
+        if re.search(
+            r"\bintermedio\b|\bintermediate\b|\bconversational\b|\bconversacional\b"
+            r"|\benglish required\b|\bingles requerido\b",
+            text,
+        ):
             return "B1"
 
         descripcion = str(adapter.get("descripcion") or "")
