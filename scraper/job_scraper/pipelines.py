@@ -6,6 +6,8 @@ from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
 from supabase import create_client
 
+from job_scraper.utils import sectionizer
+
 
 def _strip_accents(text):
     normalized = unicodedata.normalize("NFD", text or "")
@@ -308,94 +310,6 @@ class JobEnrichmentPipeline:
             return "B1"
         return "No especificado"
 
-    def _classify_heading(self, text):
-        h = _normalize_text(text)
-        h = re.sub(r"[:\-–—]+$", "", h).strip()
-        req_keys = [
-            "requisitos", "requerimientos", "conocimientos deseables", "conocimientos obligatorios",
-            "conocimientos", "perfil", "lo que buscamos", "que buscamos", "que necesitas",
-            "requisitos minimos", "requirements", "what we're looking for", "what we are looking for",
-            "qualifications", "must have", "skills", "desired skills", "preferred qualifications",
-        ]
-        ben_keys = [
-            "ofrecemos", "que ofrecemos", "lo que ofrecemos", "beneficios", "prestaciones",
-            "benefits", "what we offer", "we offer", "why join us", "perks", "compensation",
-        ]
-        for k in ben_keys:
-            if k in h:
-                return "benefits"
-        for k in req_keys:
-            if k in h:
-                return "requirements"
-        desc_keys = [
-            "actividades", "responsabilidades", "funciones", "descripcion general",
-            "que haras", "what you'll do", "what you will do", "responsibilities",
-            "about the role", "about us", "role",
-        ]
-        for k in desc_keys:
-            if k in h:
-                return "description"
-        return "description"
-
-    def _split_sections_from_text(self, text):
-        raw = str(text or "").strip()
-        if not raw:
-            return {"descripcion": "", "requirements": [], "benefits": []}
-        t = raw.replace("\r\n", "\n").replace("\r", "\n")
-        pattern = re.compile(
-            r"(?im)^(?:\s*)(requisitos|requerimientos|conocimientos deseables|conocimientos obligatorios|perfil|lo que buscamos|actividades|responsabilidades|funciones|descripción general|descripcion general|qué harás|que haras|ofrecemos|qué ofrecemos|que ofrecemos|lo que ofrecemos|beneficios|prestaciones|requirements|what we're looking for|what we are looking for|qualifications|what you'll do|what you will do|responsibilities|benefits|what we offer|we offer|why join us)\s*:?\s*$"
-        )
-        matches = list(pattern.finditer(t))
-        if not matches:
-            inline = re.compile(
-                r"(?i)(requisitos|requerimientos|conocimientos deseables|actividades|responsabilidades|ofrecemos|qué ofrecemos|que ofrecemos|beneficios|requirements|what we're looking for|qualifications|responsibilities|benefits|what we offer)\s*:\s*"
-            )
-            matches = list(inline.finditer(t))
-        if not matches:
-            return {"descripcion": re.sub(r"\s+", " ", t).strip(), "requirements": [], "benefits": []}
-
-        intro = t[: matches[0].start()].strip()
-        buckets = {"description": [intro] if intro else [], "requirements": [], "benefits": []}
-        for i, m in enumerate(matches):
-            heading = m.group(1)
-            start = m.end()
-            end = matches[i + 1].start() if i + 1 < len(matches) else len(t)
-            body = t[start:end].strip()
-            section = self._classify_heading(heading)
-            if not body:
-                continue
-            if section in {"requirements", "benefits"}:
-                candidates = re.split(r"\n+|(?:\s+[•\-–—]\s+)", body)
-                items = []
-                for c in candidates:
-                    for sub in re.split(r"\s*[•\-–—]\s+", c):
-                        it = re.sub(r"\s+", " ", sub).strip()
-                        it = re.sub(r"^[\-–—*·]+\s*", "", it).strip()
-                        if it:
-                            items.append(it)
-                if not items and body:
-                    items = [re.sub(r"\s+", " ", body).strip()]
-                buckets[section].extend(items)
-            else:
-                buckets["description"].append(re.sub(r"\s+", " ", body).strip())
-
-        def dedupe(items):
-            out = []
-            seen = set()
-            for it in items:
-                k = _normalize_text(it)
-                if k and k not in seen:
-                    seen.add(k)
-                    out.append(it)
-            return out
-
-        descripcion = "\n\n".join([p for p in buckets["description"] if p]).strip()
-        return {
-            "descripcion": descripcion,
-            "requirements": dedupe(buckets["requirements"]),
-            "benefits": dedupe(buckets["benefits"]),
-        }
-
     def _normalize_string_list(self, values):
         if not values:
             return []
@@ -430,7 +344,7 @@ class JobEnrichmentPipeline:
         descripcion = str(adapter.get("descripcion") or "").strip()
 
         if (not requirements and not benefits) and descripcion:
-            split = self._split_sections_from_text(descripcion)
+            split = sectionizer.split_sections(descripcion)
             if split.get("requirements") or split.get("benefits"):
                 requirements = split.get("requirements") or []
                 benefits = split.get("benefits") or []

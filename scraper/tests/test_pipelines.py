@@ -352,3 +352,72 @@ def test_pipeline_no_emite_es_practicante():
     enriched = run_enrichment(run_cleaning(item))
     assert "experiencia_minima" in enriched
     assert "es_practicante" not in enriched
+
+
+# --- splitter delegado a sectionizer (SPEC 08) ---------------------------
+
+
+def test_pipeline_no_contiene_splitter_duplicado():
+    assert not hasattr(JobEnrichmentPipeline, "_classify_heading")
+    assert not hasattr(JobEnrichmentPipeline, "_split_sections_from_text")
+
+
+def test_pipeline_delega_split_con_pie_de_fuente():
+    item = JobOfferItem(
+        titulo="Backend Developer",
+        empresa="ACME",
+        modalidad_raw="",
+        ubicacion_texto="",
+        descripcion=(
+            "Buscamos backend developer.\n"
+            "Requisitos:\n"
+            "- 5 años de experiencia con Python\n"
+            "GETONBRD Job ID: 12345 Seguro de gastos médicos. Vacaciones extra."
+        ),
+        tags_tecnologias=["Python"],
+        url_oferta="https://www.getonbrd.com/jobs/backend/1",
+    )
+
+    enriched = run_enrichment(run_cleaning(item))
+
+    assert any("5 años de experiencia" in r for r in enriched["requirements"])
+    assert any("Seguro de gastos médicos" in b for b in enriched["benefits"])
+    assert any("Vacaciones extra" in b for b in enriched["benefits"])
+    assert "GETONBRD Job ID" not in enriched["descripcion"]
+
+
+def test_pipeline_delega_split_de_vinietas_sin_encabezado():
+    item = JobOfferItem(
+        titulo="Backend Developer",
+        empresa="ACME",
+        modalidad_raw="",
+        ubicacion_texto="",
+        descripcion="Buscamos talento. - 5+ años de experiencia en Java - seguro de gastos médicos",
+        tags_tecnologias=[],
+        url_oferta="https://www.getonbrd.com/jobs/backend/2",
+    )
+
+    enriched = run_enrichment(run_cleaning(item))
+
+    assert any("5+ años de experiencia" in r for r in enriched["requirements"])
+    assert any("seguro de gastos médicos" in b for b in enriched["benefits"])
+    assert "Buscamos talento" in enriched["descripcion"]
+
+
+def test_pipeline_no_reemplaza_listas_ya_proporcionadas():
+    item = JobOfferItem(
+        titulo="Backend Developer",
+        empresa="ACME",
+        modalidad_raw="",
+        ubicacion_texto="",
+        descripcion="Requisitos:\n- Otro requisito",
+        requirements=["Requisito previo"],
+        benefits=["Beneficio previo"],
+        tags_tecnologias=[],
+        url_oferta="https://www.getonbrd.com/jobs/backend/3",
+    )
+
+    enriched = run_enrichment(run_cleaning(item))
+
+    assert enriched["requirements"] == ["Requisito previo"]
+    assert enriched["benefits"] == ["Beneficio previo"]
