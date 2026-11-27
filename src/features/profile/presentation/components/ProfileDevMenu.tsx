@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  Alert,
   Dimensions,
   KeyboardAvoidingView,
   Modal,
@@ -25,6 +26,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import {
+  canUseRemotePush,
+  registerForPushNotificationsAsync,
+  sendLocalTestNotification,
+  sendTestPushNotification,
+} from '@/core/push/registerPushToken';
 import { useTheme } from '@/core/theme/ThemeContext';
 
 import type { UserProfile } from '../../domain/entities/UserProfile';
@@ -48,6 +55,8 @@ export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: P
   const translateY = useSharedValue(0);
   const scrollY = useSharedValue(0);
   const sheetHeight = useSharedValue(SCREEN_HEIGHT);
+  const [isTestingPush, setIsTestingPush] = useState(false);
+  const remotePushAvailable = canUseRemotePush();
 
   useEffect(() => {
     if (visible) {
@@ -58,6 +67,36 @@ export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: P
 
   const closeSheet = () => {
     onClose();
+  };
+
+  const handleTestPush = async () => {
+    setIsTestingPush(true);
+    try {
+      if (!remotePushAvailable) {
+        await sendLocalTestNotification();
+        Alert.alert(
+          'Notificación local enviada',
+          'Expo Go solo admite notificaciones locales. Para push remoto usa un development build.',
+        );
+        return;
+      }
+
+      const token = await registerForPushNotificationsAsync();
+      if (!token) {
+        Alert.alert(
+          'Push no disponible',
+          'En Android se necesita un development build (Expo Go no soporta push remoto desde SDK 53). Revisa también los permisos y el projectId de EAS.',
+        );
+        return;
+      }
+
+      await sendTestPushNotification(token);
+      Alert.alert('Push enviado', 'Deberías recibir la notificación de prueba en este dispositivo.');
+    } catch (error) {
+      Alert.alert('Error al probar el push', error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsTestingPush(false);
+    }
   };
 
   const handleScroll = (event: { nativeEvent: { contentOffset: { y: number } } }) => {
@@ -166,6 +205,35 @@ export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: P
                       accessibilityLabel="Modo oscuro"
                     />
                   </View>
+
+                  <Pressable
+                    style={[
+                      styles.themeRow,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.background,
+                        opacity: isTestingPush ? 0.6 : 1,
+                      },
+                    ]}
+                    onPress={handleTestPush}
+                    disabled={isTestingPush}
+                    accessibilityRole="button"
+                    accessibilityLabel={remotePushAvailable ? 'Probar push' : 'Probar notificación local'}
+                  >
+                    <Text
+                      style={{
+                        fontSize: fontSize.md,
+                        fontWeight: fontWeight.semibold,
+                        color: colors.text,
+                      }}
+                    >
+                      {isTestingPush
+                        ? 'Enviando…'
+                        : remotePushAvailable
+                          ? 'Probar push'
+                          : 'Probar notificación local'}
+                    </Text>
+                  </Pressable>
 
                   <ProfileForm
                     initialProfile={initialProfile}

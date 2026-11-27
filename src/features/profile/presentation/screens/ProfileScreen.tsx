@@ -145,7 +145,13 @@ export function ProfileScreen() {
               backgroundColor: colors.primary,
               alignItems: 'center',
             }}
-            onPress={() => router.push('/onboarding')}
+            onPress={() => {if(profile) {
+              setIsDevMenuOpen(true);
+            } else {
+              router.push('/onboarding');
+            }
+          
+          }}
             accessibilityRole="button"
           >
             <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.white }}>

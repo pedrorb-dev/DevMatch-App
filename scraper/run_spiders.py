@@ -13,11 +13,13 @@ spiders still run, and ``main`` returns a non-zero exit code at the end.
 
 import logging
 import sys
+from datetime import datetime, timezone
 
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from twisted.python.failure import Failure
 
+from job_scraper.notify import notify_full_matches
 from job_scraper.spiders.computrabajo_spider import ComputrabajoSpider
 from job_scraper.spiders.getonbrd_spider import GetOnBrdSpider
 from job_scraper.spiders.hireline_spider import HirelineSpider
@@ -35,7 +37,8 @@ SPIDERS = (
 
 
 def main():
-    process = CrawlerProcess(get_project_settings())
+    settings = get_project_settings()
+    process = CrawlerProcess(settings)
     failed = []
 
     def crawl_from(index):
@@ -55,8 +58,18 @@ def main():
         return deferred
 
     crawl_from(0)
+    run_started_at = datetime.now(timezone.utc)
     # Starts the reactor and blocks until every chained crawl has finished.
     process.start()
+
+    try:
+        notify_full_matches(
+            settings.get("SUPABASE_URL"),
+            settings.get("SUPABASE_SERVICE_ROLE_KEY"),
+            run_started_at,
+        )
+    except Exception as exc:
+        logger.error("Push notifications failed: %s", exc)
 
     if failed:
         print(f"Failed spiders: {', '.join(failed)}", file=sys.stderr)
