@@ -67,6 +67,7 @@ Cada paso deja el scraper funcional y verificable.
 - **Sí:** Nominatim (gratis, sin API key). **No:** Google Geocoding (requiere key y billing).
 - **Sí:** caché `cities_cache.json` por ciudad normalizada. **No:** geocodificar cada item sin caché (rompería el rate limit).
 - **Sí:** `lat`/`lng` nullable. **No:** valor por defecto `(0,0)` (ensuciaría el cálculo de distancia).
+- **Sí:** los textos de modalidad (`Remoto`, `Remote`, `Home Office`, `Remoto (N ubicaciones)`) devuelven `None` sin llamar a Nominatim; no son lugares. **No:** geocodificarlos (Nominatim los resuelve a Italia/Oregón/Campeche y rompería la etiqueta "a X km" de SPEC 11). Si el texto además contiene una ciudad real (ej. `Miguel Hidalgo, Home Office, México`), se geocodifica solo la ciudad.
 - **Sí:** backfill como script Python. **No:** migración SQL (la geocodificación es HTTP, no SQL).
 
 ## Risks

@@ -1,0 +1,102 @@
+{
+  "acambay de ruiz castaneda, estado de mexico": {
+    "lat": 19.9590471,
+    "lng": -99.8480209
+  },
+  "apizaco, tlaxcala, mexico": {
+    "lat": 19.426431,
+    "lng": -98.0774334
+  },
+  "apodaca, nuevo leon, mexico": {
+    "lat": 25.7871006,
+    "lng": -100.1850769
+  },
+  "benito juarez, ciudad de mexico df": {
+    "lat": 19.3973999,
+    "lng": -99.1472071
+  },
+  "benito juarez, ciudad de mexico, mexico": {
+    "lat": 19.3718796,
+    "lng": -99.157701
+  },
+  "colima, colima, mexico": {
+    "lat": 19.2433991,
+    "lng": -103.7280738
+  },
+  "cuajimalpa de morelos, ciudad de mexico, mexico": {
+    "lat": 19.3572429,
+    "lng": -99.2996246
+  },
+  "cuauhtemoc, ciudad de mexico, mexico": {
+    "lat": 19.4326296,
+    "lng": -99.1331785
+  },
+  "cuautlancingo, puebla, mexico": {
+    "lat": 19.119366,
+    "lng": -98.2491624
+  },
+  "guadalajara, jalisco, mexico": {
+    "lat": 20.6784455,
+    "lng": -103.3356942
+  },
+  "gustavo a. madero, ciudad de mexico, mexico": {
+    "lat": 19.4827949,
+    "lng": -99.1133606
+  },
+  "huimilpan, queretaro, mexico": {
+    "lat": 20.4188179,
+    "lng": -100.3327789
+  },
+  "iztapalapa, ciudad de mexico, mexico": {
+    "lat": 19.3588629,
+    "lng": -99.0925404
+  },
+  "leon, guanajuato, mexico": {
+    "lat": 21.121965,
+    "lng": -101.6829766
+  },
+  "mexicali, mx": {
+    "lat": 32.6392535,
+    "lng": -115.4747273
+  },
+  "miguel hidalgo, ciudad de mexico df, mexico": {
+    "lat": 19.4255037,
+    "lng": -99.2160463
+  },
+  "miguel hidalgo, ciudad de mexico, mexico": {
+    "lat": 19.4071156,
+    "lng": -99.1906167
+  },
+  "miguel hidalgo, mexico": {
+    "lat": 19.4071156,
+    "lng": -99.1906167
+  },
+  "monterrey, nuevo leon, mexico": {
+    "lat": 25.6802019,
+    "lng": -100.315258
+  },
+  "naucalpan de juarez, estado de mexico, mexico": {
+    "lat": 19.4788356,
+    "lng": -99.2327986
+  },
+  "queretaro, mexico": {
+    "lat": 20.8052225,
+    "lng": -99.8837376
+  },
+  "tlalpan, ciudad de mexico, mexico": {
+    "lat": 19.2880603,
+    "lng": -99.1669733
+  },
+  "toluca, estado de mexico, mexico": {
+    "lat": 19.292545,
+    "lng": -99.6569007
+  },
+  "yecapixtla, mexico": {
+    "lat": 18.8594955,
+    "lng": -98.8744443
+  },
+  "zapopan, jalisco, mexico": {
+    "lat": 20.7211203,
+    "lng": -103.3913671
+  }
+}

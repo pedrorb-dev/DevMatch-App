@@ -6,6 +6,7 @@ from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
 from supabase import create_client
 
+from job_scraper import geocode
 from job_scraper.utils import sectionizer
 
 
@@ -181,6 +182,10 @@ class JobEnrichmentPipeline:
         (r"\bvue(?:\.js)?\b", "Vue"),
     ]
 
+    def __init__(self):
+        # Una sola caché de ciudades para todos los items del scrapeo.
+        self.geocode_cache = geocode.load_cache()
+
     def _detect_modalidad(self, adapter):
         text = _normalize_text(
             " ".join(
@@ -339,6 +344,10 @@ class JobEnrichmentPipeline:
         adapter["experiencia_minima"] = self._detect_experiencia_minima(adapter)
         adapter["nivel_ingles"] = self._detect_nivel_ingles(adapter)
 
+        coords = geocode.geocode(adapter.get("ubicacion_texto"), self.geocode_cache)
+        adapter["lat"] = coords[0] if coords else None
+        adapter["lng"] = coords[1] if coords else None
+
         requirements = self._normalize_string_list(adapter.get("requirements") or [])
         benefits = self._normalize_string_list(adapter.get("benefits") or [])
         descripcion = str(adapter.get("descripcion") or "").strip()
@@ -384,6 +393,13 @@ class SupabaseUpsertPipeline:
         except (TypeError, ValueError):
             return 1
 
+    @staticmethod
+    def _coerce_coordenada(value):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
     def process_item(self, item, spider):
         if not self.client:
             return item
@@ -399,6 +415,8 @@ class SupabaseUpsertPipeline:
             "nivel_ingles": adapter.get("nivel_ingles") or "No especificado",
             "experiencia_minima": self._coerce_experiencia_minima(adapter.get("experiencia_minima")),
             "ubicacion_texto": adapter.get("ubicacion_texto") or "",
+            "lat": self._coerce_coordenada(adapter.get("lat")),
+            "lng": self._coerce_coordenada(adapter.get("lng")),
             "url_oferta": adapter.get("url_oferta") or "",
         }
         try:

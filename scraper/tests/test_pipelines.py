@@ -1,8 +1,15 @@
 import pytest
 from scrapy.exceptions import DropItem
 
+from job_scraper import geocode
 from job_scraper.items import JobOfferItem
-from job_scraper.pipelines import DataCleaningPipeline, JobEnrichmentPipeline
+from job_scraper.pipelines import DataCleaningPipeline, JobEnrichmentPipeline, SupabaseUpsertPipeline
+
+
+@pytest.fixture(autouse=True)
+def geocode_sin_red(monkeypatch):
+    """Los tests de pipelines no deben llamar a Nominatim."""
+    monkeypatch.setattr(geocode, "geocode", lambda text, cache: None)
 
 
 class DummySpider:
@@ -421,3 +428,97 @@ def test_pipeline_no_reemplaza_listas_ya_proporcionadas():
 
     assert enriched["requirements"] == ["Requisito previo"]
     assert enriched["benefits"] == ["Beneficio previo"]
+
+
+# --- geocodificación (SPEC 10) ---------------------------------------------
+
+
+def test_enrichment_setea_lat_lng_desde_geocode(monkeypatch):
+    monkeypatch.setattr(geocode, "geocode", lambda text, cache: (25.6866, -100.3161))
+    item = JobOfferItem(
+        titulo="Backend Developer",
+        empresa="ACME",
+        modalidad_raw="",
+        ubicacion_texto="Monterrey, México",
+        descripcion="",
+        tags_tecnologias=[],
+        url_oferta="https://example.com/empleo/geo-1",
+    )
+
+    enriched = run_enrichment(item)
+
+    assert enriched["lat"] == 25.6866
+    assert enriched["lng"] == -100.3161
+
+
+def test_enrichment_deja_lat_lng_null_cuando_no_hay_coordenadas(monkeypatch):
+    texts = []
+
+    def fake_geocode(text, cache):
+        texts.append(text)
+        return None
+
+    monkeypatch.setattr(geocode, "geocode", fake_geocode)
+    item = JobOfferItem(
+        titulo="Backend Developer",
+        empresa="ACME",
+        modalidad_raw="",
+        ubicacion_texto="",
+        descripcion="",
+        tags_tecnologias=[],
+        url_oferta="https://example.com/empleo/geo-2",
+    )
+
+    enriched = run_enrichment(item)
+
+    assert texts == [""]
+    assert enriched["lat"] is None
+    assert enriched["lng"] is None
+
+
+class FakeUpsertClient:
+    def __init__(self):
+        self.upserts = []
+
+    def table(self, name):
+        assert name == "vacantes"
+        return self
+
+    def upsert(self, payload, on_conflict):
+        self.upserts.append((payload, on_conflict))
+        return self
+
+    def execute(self):
+        return None
+
+
+def test_upsert_incluye_lat_lng_en_payload():
+    pipeline = SupabaseUpsertPipeline("https://supabase.test", "key")
+    pipeline.client = FakeUpsertClient()
+    item = JobOfferItem(
+        titulo="Backend Developer",
+        empresa="ACME",
+        modalidad_raw="",
+        ubicacion_texto="Monterrey, México",
+        descripcion="",
+        tags_tecnologias=[],
+        url_oferta="https://example.com/empleo/geo-3",
+        lat=25.6866,
+        lng=-100.3161,
+    )
+
+    pipeline.process_item(item, DummySpider())
+
+    payload, on_conflict = pipeline.client.upserts[0]
+    assert on_conflict == "url_oferta"
+    assert payload["lat"] == 25.6866
+    assert payload["lng"] == -100.3161
+    assert payload["ubicacion_texto"] == "Monterrey, México"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("25.68", 25.68), (None, None), ("no es número", None)],
+)
+def test_upsert_coordena_invalida_se_vuelve_null(value, expected):
+    assert SupabaseUpsertPipeline._coerce_coordenada(value) == expected

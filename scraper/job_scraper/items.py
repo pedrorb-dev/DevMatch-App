@@ -18,3 +18,5 @@ class JobOfferItem(scrapy.Item):
     nivel_ingles = scrapy.Field()  # 'No especificado' | 'B1' | 'B2' | 'C1'
     requirements = scrapy.Field()  # list[str] (extraídos/normalizados; pueden quedar vacíos si no hay sección)
     benefits = scrapy.Field()  # list[str] (extraídos/normalizados; pueden quedar vacíos si no hay sección)
+    lat = scrapy.Field()  # float | None (geocodificado en el pipeline)
+    lng = scrapy.Field()  # float | None (geocodificado en el pipeline)
