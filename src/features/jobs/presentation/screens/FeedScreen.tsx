@@ -10,7 +10,10 @@ import {
   View,
 } from 'react-native';
 
+import { haversineKm, type Coordinates } from '@/core/location/distance';
+import { useDeviceLocation } from '@/core/location/useDeviceLocation';
 import { useTheme } from '@/core/theme/ThemeContext';
+import type { JobOffer } from '../../domain/entities/JobOffer';
 import { JobCard } from '../components/JobCard';
 import { useJobs } from '../hooks/useJobs';
 
@@ -43,17 +46,59 @@ const isCreatedOnDay = (isoDate: string, daysAgo: number, now: Date): boolean =>
   );
 };
 
+/** Distancia en km al dispositivo, o null cuando falta alguna coordenada. */
+const getDistanceKm = (job: JobOffer, deviceCoords: Coordinates | null): number | null =>
+  deviceCoords !== null && job.lat !== null && job.lng !== null
+    ? haversineKm(deviceCoords, { latitude: job.lat, longitude: job.lng })
+    : null;
+
+/**
+ * Remoto primero, luego distancia ascendente y sin coordenadas al final.
+ * Sin ubicación del dispositivo se conserva el orden neutral (created_at).
+ * El índice original desempata para no alterar el orden de las filas iguales.
+ */
+const sortByDistance = (jobs: JobOffer[], deviceCoords: Coordinates | null): JobOffer[] => {
+  if (!deviceCoords) return jobs;
+
+  return jobs
+    .map((job, index) => ({
+      job,
+      index,
+      distance: getDistanceKm(job, deviceCoords),
+    }))
+    .sort((a, b) => {
+      const aRemote = a.job.modality === 'Remoto';
+      const bRemote = b.job.modality === 'Remoto';
+
+      if (aRemote !== bRemote) return aRemote ? -1 : 1;
+      // En remoto la distancia no aplica: se trata como 0 y mantiene su orden.
+      if (aRemote) return a.index - b.index;
+
+      if (a.distance !== null && b.distance !== null && a.distance !== b.distance) {
+        return a.distance - b.distance;
+      }
+      if (a.distance !== null && b.distance === null) return -1;
+      if (a.distance === null && b.distance !== null) return 1;
+      return a.index - b.index;
+    })
+    .map(({ job }) => job);
+};
+
 export function FeedScreen() {
   const router = useRouter();
   const { jobs, isLoading, error } = useJobs();
+  const { coords } = useDeviceLocation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const [selectedDaysAgo, setSelectedDaysAgo] = useState<number | null>(null);
 
   const visibleJobs = useMemo(() => {
-    if (selectedDaysAgo === null) return jobs;
-    const now = new Date();
-    return jobs.filter((job) => isCreatedOnDay(job.createdAt, selectedDaysAgo, now));
-  }, [jobs, selectedDaysAgo]);
+    const filtered =
+      selectedDaysAgo === null
+        ? jobs
+        : jobs.filter((job) => isCreatedOnDay(job.createdAt, selectedDaysAgo, new Date()));
+
+    return sortByDistance(filtered, coords);
+  }, [jobs, selectedDaysAgo, coords]);
 
   if (isLoading) {
     return (
@@ -153,7 +198,11 @@ export function FeedScreen() {
           gap: spacing.md,
         }}
         renderItem={({ item }) => (
-          <JobCard job={item} onPress={() => router.push(`/work/${item.id}`)} />
+          <JobCard
+            job={item}
+            distanceKm={getDistanceKm(item, coords)}
+            onPress={() => router.push(`/work/${item.id}`)}
+          />
         )}
         ListEmptyComponent={
           <Text

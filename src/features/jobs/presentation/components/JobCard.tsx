@@ -8,10 +8,11 @@ import { ModalityBadge } from './ModalityBadge';
 
 interface JobCardProps {
   job: JobOffer;
+  distanceKm?: number | null;
   onPress: () => void;
 }
 
-export function JobCard({ job, onPress }: JobCardProps) {
+export function JobCard({ job, distanceKm, onPress }: JobCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const favorite = isFavorite(job.id);
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
@@ -63,6 +64,18 @@ export function JobCard({ job, onPress }: JobCardProps) {
 
       <View style={[styles.footer, { gap: spacing.sm, marginTop: spacing.xs }]}>
         <ModalityBadge modality={job.modality} />
+        {distanceKm != null && (
+          <Text
+            style={{
+              fontSize: fontSize.xs,
+              fontWeight: fontWeight.medium,
+              color: colors.primaryText,
+            }}
+            numberOfLines={1}
+          >
+            a {Math.round(distanceKm)} km
+          </Text>
+        )}
         <Text
           style={{
             flex: 1,

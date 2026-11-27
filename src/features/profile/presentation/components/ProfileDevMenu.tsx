@@ -206,35 +206,6 @@ export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: P
                     />
                   </View>
 
-                  <Pressable
-                    style={[
-                      styles.themeRow,
-                      {
-                        borderColor: colors.border,
-                        backgroundColor: colors.background,
-                        opacity: isTestingPush ? 0.6 : 1,
-                      },
-                    ]}
-                    onPress={handleTestPush}
-                    disabled={isTestingPush}
-                    accessibilityRole="button"
-                    accessibilityLabel={remotePushAvailable ? 'Probar push' : 'Probar notificación local'}
-                  >
-                    <Text
-                      style={{
-                        fontSize: fontSize.md,
-                        fontWeight: fontWeight.semibold,
-                        color: colors.text,
-                      }}
-                    >
-                      {isTestingPush
-                        ? 'Enviando…'
-                        : remotePushAvailable
-                          ? 'Probar push'
-                          : 'Probar notificación local'}
-                    </Text>
-                  </Pressable>
-
                   <ProfileForm
                     initialProfile={initialProfile}
                     submitLabel="Guardar"

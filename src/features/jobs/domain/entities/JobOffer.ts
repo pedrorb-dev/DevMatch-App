@@ -12,6 +12,8 @@ export interface JobOffer {
   englishLevel: EnglishLevel;
   isPracticante: boolean;
   locationText: string;
+  lat: number | null;
+  lng: number | null;
   url: string;
   createdAt: string;
 }
