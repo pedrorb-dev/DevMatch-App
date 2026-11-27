@@ -49,13 +49,13 @@ El proyecto implementa **Feature-Based Architecture + Clean Architecture + Separ
 1. **Separación por Capas dentro de cada Feature:**
    - `domain/`: Entidades puras (`JobOffer`, `UserProfile`), interfaces de repositorios y tipos estrictos (`types`).
    - `infrastructure/`: Comunicación con Supabase, DTOs (`snake_case`), Mappers hacia entidades (`camelCase`) y servicios nativos (GPS).
-   - `presentation/`: Pantallas (`FeedScreen`, `FavoritesScreen`, `ProfileScreen`, `WorkScreen`), componentes UI (`CustomDrawerContent`, `InlineFilterChips`, `JobCard`), interfaces `Props`, custom hooks con TanStack Query y estilos locales.
+   - `presentation/`: Pantallas (`FeedScreen`, `FavoritesScreen`, `ProfileScreen`, `WorkScreen`), componentes UI (`InlineFilterChips`, `JobCard`), interfaces `Props`, custom hooks con TanStack Query y estilos locales.
 2. **Design Tokens Centralizados:** Los colores (Indigo `#4F46E5`, Blanco `#FFFFFF` / `#F8FAFC`), espaciados y tipografías viven en `src/core/theme/theme.ts`, mientras que cada componente encapsula su propio `StyleSheet`.
 3. **Flujo de Navegación:**
    - `app/_layout.tsx` provee el contexto global (`SafeAreaProvider`, `QueryClientProvider`) y renderiza `<Slot />`.
-   - `app/index.tsx` evalúa si existe un perfil local; si no existe, redirige con `<Redirect href="/onboarding" />`, de lo contrario entra al grupo `<Drawer />`.
-   - `app/(drawer)/_layout.tsx` renderiza el **Custom Drawer** con acceso a **Inicio**, **Favoritos** y **Perfil**.
-   - `app/work/[id].tsx` vive dentro del `<Stack />` raíz (fuera del Drawer) para abrir `WorkScreen` en pantalla completa con navegación de regreso limpia y botón directo hacia la oferta real.
+   - `app/index.tsx` evalúa si existe un perfil local; si no existe, redirige con `<Redirect href="/onboarding" />`, de lo contrario entra al grupo `<Tabs />`.
+   - `app/(tabs)/_layout.tsx` renderiza los **Tabs** con acceso a **Inicio**, **Favoritos** y **Perfil**.
+   - `app/work/[id].tsx` vive dentro del `<Stack />` raíz (fuera de los Tabs) para abrir `WorkScreen` en pantalla completa con navegación de regreso limpia y botón directo hacia la oferta real.
 
 ### Estructura de Carpetas
 
@@ -65,8 +65,8 @@ devmatch/
 │   ├── _layout.tsx                   # Root Layout con Providers, <Stack /> y <Slot />
 │   ├── index.tsx                     # Control de acceso con <Redirect />
 │   ├── onboarding.tsx                # Configuración inicial del perfil
-│   ├── (drawer)/                     # Grupo de navegación con Custom Drawer
-│   │   ├── _layout.tsx               # Configuración del Drawer + CustomDrawerContent
+│   ├── (tabs)/                       # Grupo de navegación con Tabs
+│   │   ├── _layout.tsx               # Configuración de los Tabs + iconos
 │   │   ├── index.tsx                 # Inicio (Feed con chipset inline del día)
 │   │   ├── favorites.tsx             # Favoritos (Vacantes guardadas)
 │   │   └── profile.tsx               # Perfil de usuario + DevMenu integrado
@@ -91,7 +91,7 @@ devmatch/
 │       │   │   ├── mappers/          # JobMapper.ts
 │       │   │   └── repositories/     # JobRepositoryImpl.ts
 │       │   └── presentation/
-│       │       ├── components/       # JobCard.tsx, InlineFilterChips.tsx, CustomDrawerContent.tsx
+│       │       ├── components/       # JobCard.tsx, InlineFilterChips.tsx
 │       │       ├── hooks/            # useJobsQuery.ts, useToggleFavoriteMutation.ts
 │       │       └── screens/          # FeedScreen.tsx, FavoritesScreen.tsx, WorkScreen.tsx
 │       │
