@@ -12,10 +12,10 @@ import {
   View,
 } from 'react-native';
 import {
-  Gesture,
   GestureDetector,
   GestureHandlerRootView,
   ScrollView,
+  usePanGesture,
 } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -37,8 +37,6 @@ import { useTheme } from '@/core/theme/ThemeContext';
 import type { UserProfile } from '../../domain/entities/UserProfile';
 import { ProfileForm } from './ProfileForm';
 
-const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
-
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const CLOSE_THRESHOLD = 140;
 const CLOSE_VELOCITY = 1200;
@@ -53,7 +51,8 @@ interface ProfileDevMenuProps {
 export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: ProfileDevMenuProps) {
   const { colors, isDark, toggleMode, spacing, fontSize, fontWeight } = useTheme();
   const translateY = useSharedValue(0);
-  const scrollY = useSharedValue(0);
+  const scrollOffset = useSharedValue(0);
+  const startedAtTop = useSharedValue(false);
   const sheetHeight = useSharedValue(SCREEN_HEIGHT);
   const [isTestingPush, setIsTestingPush] = useState(false);
   const remotePushAvailable = canUseRemotePush();
@@ -61,9 +60,9 @@ export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: P
   useEffect(() => {
     if (visible) {
       translateY.value = 0;
-      scrollY.value = 0;
+      scrollOffset.value = 0;
     }
-  }, [scrollY, translateY, visible]);
+  }, [scrollOffset, translateY, visible]);
 
   const closeSheet = () => {
     onClose();
@@ -100,34 +99,32 @@ export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: P
   };
 
   const handleScroll = (event: { nativeEvent: { contentOffset: { y: number } } }) => {
-    scrollY.value = Math.max(0, event.nativeEvent.contentOffset.y);
+    scrollOffset.value = Math.max(0, event.nativeEvent.contentOffset.y);
   };
 
-  const nativeScrollGesture = Gesture.Native();
-
-  const panGesture = Gesture.Pan()
-    .activeOffsetY([10, 9999])
-    .failOffsetY([-9999, -10])
-    .simultaneousWithExternalGesture(nativeScrollGesture)
-    .onUpdate((event) => {
-      if (scrollY.value <= 0 && event.translationY > 0) {
-        translateY.value = event.translationY;
-      } else if (scrollY.value <= 0 && event.translationY <= 0) {
+  const panGesture = usePanGesture({
+    // Only activate when dragging down; let the ScrollView own upward drags.
+    activeOffsetY: [-9999, 10],
+    failOffsetY: [-10, 9999],
+    onBegin: () => {
+      // Capture at touch-down so dragging back to the top mid-gesture doesn't jump.
+      startedAtTop.value = scrollOffset.value <= 0;
+    },
+    onUpdate: (event) => {
+      if (!startedAtTop.value) {
         translateY.value = 0;
+        return;
       }
-      // If content is scrolled down, keep sheet in place and let scroll handle the gesture.
-      if (scrollY.value > 0) {
-        translateY.value = 0;
-      }
-    })
-    .onEnd((event) => {
-      if (scrollY.value > 0) {
-        translateY.value = withSpring(0, { damping: 20, stiffness: 220 });
+      translateY.value = Math.max(0, event.translationY);
+    },
+    onDeactivate: (event) => {
+      if (!startedAtTop.value) {
         return;
       }
 
       const shouldClose =
-        translateY.value > CLOSE_THRESHOLD || event.velocityY > CLOSE_VELOCITY;
+        !event.canceled &&
+        (translateY.value > CLOSE_THRESHOLD || event.velocityY > CLOSE_VELOCITY);
 
       if (shouldClose) {
         const target = sheetHeight.value || SCREEN_HEIGHT;
@@ -139,9 +136,8 @@ export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: P
       } else {
         translateY.value = withSpring(0, { damping: 20, stiffness: 220 });
       }
-    });
-
-  const composedGesture = Gesture.Simultaneous(panGesture, nativeScrollGesture);
+    },
+  });
 
   const sheetAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -162,7 +158,7 @@ export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: P
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.sheetContainer}
           >
-            <GestureDetector gesture={composedGesture}>
+            <GestureDetector gesture={panGesture}>
               <Animated.View
                 style={[styles.sheet, { backgroundColor: colors.surface }, sheetAnimatedStyle]}
                 onLayout={(event) => {
@@ -172,10 +168,11 @@ export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: P
                 <View style={[styles.handle, { backgroundColor: colors.border }]} />
                 <Text style={[styles.title, { color: colors.text }]}>Editar perfil</Text>
 
-                <AnimatedScrollView
+                <ScrollView
                   contentContainerStyle={styles.content}
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={false}
+                  simultaneousWith={panGesture}
                   onScroll={handleScroll}
                   scrollEventThrottle={16}
                   bounces={false}
@@ -215,7 +212,7 @@ export function ProfileDevMenu({ visible, initialProfile, onSubmit, onClose }: P
                   <Pressable style={styles.cancelButton} onPress={onClose} accessibilityRole="button">
                     <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>Cancelar</Text>
                   </Pressable>
-                </AnimatedScrollView>
+                </ScrollView>
               </Animated.View>
             </GestureDetector>
           </KeyboardAvoidingView>

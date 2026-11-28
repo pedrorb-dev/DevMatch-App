@@ -51,7 +51,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="favorites"
-        options={{ title: 'Favoritos', tabBarIcon: tabBarIcon('heart', 'bookmark-outline') }}
+        options={{ title: 'Favoritos', tabBarIcon: tabBarIcon('bookmark', 'bookmark-outline') }}
       />
       <Tabs.Screen
         name="profile"
