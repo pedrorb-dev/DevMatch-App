@@ -1,5 +1,6 @@
 import pytest
 
+from job_scraper import matching
 from job_scraper.matching import (
     canonical_tech,
     english_rank,
@@ -105,3 +106,29 @@ def test_is_full_match_inglés_menor_o_no_especificado_si_se_acepta():
 
 def test_is_full_match_perfil_c2_cubre_vacante_b2():
     assert is_full_match(make_user(nivel_ingles="C2"), make_job(nivel_ingles="B2"))
+
+
+# --- vocabulario canónico compartido (SPEC 12) -------------------------------
+
+
+def test_no_queda_mapa_de_alias_duplicado_en_matching():
+    assert not hasattr(matching, "_EXTRA_STACK_ALIASES")
+
+
+@pytest.mark.parametrize(
+    ("token", "expected"),
+    [
+        ("FastApi", "FastAPI"),
+        ("react-native", "React Native"),
+        ("C#", "C#"),
+        (".NET", ".NET"),
+        ("golang", "Go"),
+        ("spring boot 3", "Spring Boot"),
+    ],
+)
+def test_canonical_tech_usa_el_catalogo(token, expected):
+    assert canonical_tech(token) == expected
+
+
+def test_stack_match_percent_compara_nombres_canonicos():
+    assert stack_match_percent(["FastApi", "React Native", "C#"], ["FastAPI", "reactnative", "csharp"]) == 100

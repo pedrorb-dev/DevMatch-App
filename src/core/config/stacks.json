@@ -1,0 +1,362 @@
+[
+  {
+    "name": "React",
+    "category": "frontend",
+    "selectable": true,
+    "aliases": ["react", "reactjs"],
+    "patterns": ["react", "reactjs"],
+    "slugs": { "occ": "react", "computrabajo": "react", "getonbrd": "react" }
+  },
+  {
+    "name": "Vue",
+    "category": "frontend",
+    "selectable": true,
+    "aliases": ["vue", "vuejs", "vue.js"],
+    "patterns": ["vue", "vuejs", "vue.js"],
+    "slugs": { "occ": "vue", "computrabajo": "vue", "getonbrd": "vue" }
+  },
+  {
+    "name": "Angular",
+    "category": "frontend",
+    "selectable": true,
+    "aliases": ["angular", "angularjs"],
+    "patterns": ["angular", "angularjs"],
+    "slugs": { "occ": "angular", "computrabajo": "angular", "getonbrd": "angular" }
+  },
+  {
+    "name": "Svelte",
+    "category": "frontend",
+    "selectable": true,
+    "aliases": ["svelte", "sveltekit"],
+    "patterns": ["svelte", "sveltekit"],
+    "slugs": { "occ": "svelte", "computrabajo": "svelte", "getonbrd": "svelte" }
+  },
+  {
+    "name": "Next.js",
+    "category": "frontend",
+    "selectable": true,
+    "aliases": ["next.js", "nextjs", "next js"],
+    "patterns": ["next.js", "nextjs", "next js"],
+    "slugs": { "occ": "next-js", "computrabajo": "next-js", "getonbrd": "next-js" }
+  },
+  {
+    "name": "JavaScript",
+    "category": "frontend",
+    "selectable": true,
+    "aliases": ["javascript", "js", "ecmascript", "es6"],
+    "patterns": ["javascript", "ecmascript", "es6"],
+    "slugs": { "occ": "javascript", "computrabajo": "javascript", "getonbrd": "javascript" }
+  },
+  {
+    "name": "TypeScript",
+    "category": "frontend",
+    "selectable": true,
+    "aliases": ["typescript", "ts"],
+    "patterns": ["typescript"],
+    "slugs": { "occ": "typescript", "computrabajo": "typescript", "getonbrd": "typescript" }
+  },
+  {
+    "name": "React Native",
+    "category": "mobile",
+    "selectable": true,
+    "aliases": ["react native", "react-native", "reactnative"],
+    "patterns": ["react native", "react-native", "reactnative"],
+    "slugs": { "occ": "react-native", "computrabajo": "react-native", "getonbrd": "react-native" }
+  },
+  {
+    "name": "Flutter",
+    "category": "mobile",
+    "selectable": true,
+    "aliases": ["flutter"],
+    "patterns": ["flutter"],
+    "slugs": { "occ": "flutter", "computrabajo": "flutter", "getonbrd": "flutter" }
+  },
+  {
+    "name": "Swift",
+    "category": "mobile",
+    "selectable": true,
+    "aliases": ["swift"],
+    "patterns": ["swift"],
+    "slugs": { "occ": "swift", "computrabajo": "swift", "getonbrd": "swift" }
+  },
+  {
+    "name": "Kotlin",
+    "category": "mobile",
+    "selectable": true,
+    "aliases": ["kotlin"],
+    "patterns": ["kotlin"],
+    "slugs": { "occ": "kotlin", "computrabajo": "kotlin", "getonbrd": "kotlin" }
+  },
+  {
+    "name": "Node.js",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["node.js", "nodejs", "node js", "node"],
+    "patterns": ["node.js", "nodejs", "node js"],
+    "slugs": { "occ": "node-js", "computrabajo": "node-js", "getonbrd": "node-js" }
+  },
+  {
+    "name": "Python",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["python"],
+    "patterns": ["python"],
+    "slugs": { "occ": "python", "computrabajo": "python", "getonbrd": "python" }
+  },
+  {
+    "name": "Java",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["java"],
+    "patterns": ["java"],
+    "slugs": { "occ": "java", "computrabajo": "java", "getonbrd": "java" }
+  },
+  {
+    "name": "C#",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["c#", "csharp", "c sharp"],
+    "patterns": ["c#", "csharp", "c sharp"],
+    "slugs": { "occ": "c-sharp", "computrabajo": "c-sharp", "getonbrd": "c-sharp" }
+  },
+  {
+    "name": ".NET",
+    "category": "backend",
+    "selectable": true,
+    "aliases": [".net", "dotnet", "net"],
+    "patterns": [".net", "dotnet"],
+    "slugs": { "occ": "dotnet", "computrabajo": "dotnet", "getonbrd": "dotnet" }
+  },
+  {
+    "name": "Go",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["go", "golang"],
+    "patterns": ["golang", "go"],
+    "slugs": { "occ": "go", "computrabajo": "go", "getonbrd": "go" }
+  },
+  {
+    "name": "PHP",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["php"],
+    "patterns": ["php"],
+    "slugs": { "occ": "php", "computrabajo": "php", "getonbrd": "php" }
+  },
+  {
+    "name": "Ruby",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["ruby"],
+    "patterns": ["ruby"],
+    "slugs": { "occ": "ruby", "computrabajo": "ruby", "getonbrd": "ruby" }
+  },
+  {
+    "name": "Rust",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["rust"],
+    "patterns": ["rust"],
+    "slugs": { "occ": "rust", "computrabajo": "rust", "getonbrd": "rust" }
+  },
+  {
+    "name": "Django",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["django"],
+    "patterns": ["django"],
+    "slugs": { "occ": "django", "computrabajo": "django", "getonbrd": "django" }
+  },
+  {
+    "name": "Flask",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["flask"],
+    "patterns": ["flask"],
+    "slugs": { "occ": "flask", "computrabajo": "flask", "getonbrd": "flask" }
+  },
+  {
+    "name": "FastAPI",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["fastapi", "fast api", "fast-api"],
+    "patterns": ["fastapi", "fast api"],
+    "slugs": { "occ": "fastapi", "computrabajo": "fastapi", "getonbrd": "fastapi" }
+  },
+  {
+    "name": "Spring Boot",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["spring boot", "springboot", "spring"],
+    "patterns": ["spring boot", "springboot"],
+    "slugs": { "occ": "spring-boot", "computrabajo": "spring-boot", "getonbrd": "spring-boot" }
+  },
+  {
+    "name": "Laravel",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["laravel"],
+    "patterns": ["laravel"],
+    "slugs": { "occ": "laravel", "computrabajo": "laravel", "getonbrd": "laravel" }
+  },
+  {
+    "name": "Ruby on Rails",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["ruby on rails", "rails"],
+    "patterns": ["ruby on rails", "rails"],
+    "slugs": { "occ": "ruby-on-rails", "computrabajo": "ruby-on-rails", "getonbrd": "ruby-on-rails" }
+  },
+  {
+    "name": "Express",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["express", "expressjs", "express.js"],
+    "patterns": ["expressjs", "express.js", "express"],
+    "slugs": { "occ": "express", "computrabajo": "express", "getonbrd": "express" }
+  },
+  {
+    "name": "NestJS",
+    "category": "backend",
+    "selectable": true,
+    "aliases": ["nestjs", "nest js", "nest.js"],
+    "patterns": ["nestjs", "nest js", "nest.js"],
+    "slugs": { "occ": "nestjs", "computrabajo": "nestjs", "getonbrd": "nestjs" }
+  },
+  {
+    "name": "SQL",
+    "category": "data",
+    "selectable": true,
+    "aliases": ["sql"],
+    "patterns": ["sql"],
+    "slugs": { "occ": "sql", "computrabajo": "sql", "getonbrd": "sql" }
+  },
+  {
+    "name": "PostgreSQL",
+    "category": "data",
+    "selectable": true,
+    "aliases": ["postgresql", "postgres"],
+    "patterns": ["postgresql", "postgres"],
+    "slugs": { "occ": "postgresql", "computrabajo": "postgresql", "getonbrd": "postgresql" }
+  },
+  {
+    "name": "MySQL",
+    "category": "data",
+    "selectable": true,
+    "aliases": ["mysql"],
+    "patterns": ["mysql"],
+    "slugs": { "occ": "mysql", "computrabajo": "mysql", "getonbrd": "mysql" }
+  },
+  {
+    "name": "MongoDB",
+    "category": "data",
+    "selectable": true,
+    "aliases": ["mongodb", "mongo"],
+    "patterns": ["mongodb", "mongo"],
+    "slugs": { "occ": "mongodb", "computrabajo": "mongodb", "getonbrd": "mongodb" }
+  },
+  {
+    "name": "Redis",
+    "category": "data",
+    "selectable": true,
+    "aliases": ["redis"],
+    "patterns": ["redis"],
+    "slugs": { "occ": "redis", "computrabajo": "redis", "getonbrd": "redis" }
+  },
+  {
+    "name": "Elasticsearch",
+    "category": "data",
+    "selectable": true,
+    "aliases": ["elasticsearch", "elastic search"],
+    "patterns": ["elasticsearch", "elastic search"],
+    "slugs": { "occ": "elasticsearch", "computrabajo": "elasticsearch", "getonbrd": "elasticsearch" }
+  },
+  {
+    "name": "AWS",
+    "category": "cloud",
+    "selectable": true,
+    "aliases": ["aws", "amazon web services"],
+    "patterns": ["aws", "amazon web services"],
+    "slugs": { "occ": "aws", "computrabajo": "aws", "getonbrd": "aws" }
+  },
+  {
+    "name": "Azure",
+    "category": "cloud",
+    "selectable": true,
+    "aliases": ["azure"],
+    "patterns": ["azure"],
+    "slugs": { "occ": "azure", "computrabajo": "azure", "getonbrd": "azure" }
+  },
+  {
+    "name": "GCP",
+    "category": "cloud",
+    "selectable": true,
+    "aliases": ["gcp", "google cloud", "google cloud platform"],
+    "patterns": ["gcp", "google cloud"],
+    "slugs": { "occ": "gcp", "computrabajo": "gcp", "getonbrd": "gcp" }
+  },
+  {
+    "name": "Docker",
+    "category": "cloud",
+    "selectable": true,
+    "aliases": ["docker"],
+    "patterns": ["docker"],
+    "slugs": { "occ": "docker", "computrabajo": "docker", "getonbrd": "docker" }
+  },
+  {
+    "name": "Kubernetes",
+    "category": "cloud",
+    "selectable": true,
+    "aliases": ["kubernetes", "k8s"],
+    "patterns": ["kubernetes", "k8s"],
+    "slugs": { "occ": "kubernetes", "computrabajo": "kubernetes", "getonbrd": "kubernetes" }
+  },
+  {
+    "name": "Terraform",
+    "category": "cloud",
+    "selectable": true,
+    "aliases": ["terraform"],
+    "patterns": ["terraform"],
+    "slugs": { "occ": "terraform", "computrabajo": "terraform", "getonbrd": "terraform" }
+  },
+  {
+    "name": "GraphQL",
+    "category": "other",
+    "selectable": false,
+    "aliases": ["graphql"],
+    "patterns": ["graphql"],
+    "slugs": { "occ": "graphql", "computrabajo": "graphql", "getonbrd": "graphql" }
+  },
+  {
+    "name": "REST",
+    "category": "other",
+    "selectable": false,
+    "aliases": ["rest", "rest api", "restful"],
+    "patterns": ["rest api", "restful", "rest"],
+    "slugs": { "occ": "rest", "computrabajo": "rest", "getonbrd": "rest" }
+  },
+  {
+    "name": "Git",
+    "category": "other",
+    "selectable": false,
+    "aliases": ["git"],
+    "patterns": ["git"],
+    "slugs": { "occ": "git", "computrabajo": "git", "getonbrd": "git" }
+  },
+  {
+    "name": "Linux",
+    "category": "other",
+    "selectable": false,
+    "aliases": ["linux"],
+    "patterns": ["linux"],
+    "slugs": { "occ": "linux", "computrabajo": "linux", "getonbrd": "linux" }
+  },
+  {
+    "name": "Kafka",
+    "category": "other",
+    "selectable": false,
+    "aliases": ["kafka", "apache kafka"],
+    "patterns": ["kafka", "apache kafka"],
+    "slugs": { "occ": "kafka", "computrabajo": "kafka", "getonbrd": "kafka" }
+  }
+]

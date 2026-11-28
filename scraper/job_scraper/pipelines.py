@@ -6,8 +6,20 @@ from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
 from supabase import create_client
 
-from job_scraper import geocode
+from job_scraper import geocode, stack_catalog
 from job_scraper.utils import sectionizer
+
+
+def _compile_stack_pattern(pattern):
+    """Convierte un patrón literal del catálogo en regex con límites de palabra."""
+    regex = re.escape(pattern).replace(r"\ ", r"\s+")
+    if pattern[:1].isalnum() or pattern[:1] == "_":
+        regex = r"\b" + regex
+    if pattern[-1:].isalnum() or pattern[-1:] == "_":
+        regex += r"\b"
+    else:
+        regex += r"(?!\w)"
+    return regex
 
 
 def _strip_accents(text):
@@ -90,49 +102,12 @@ class DataCleaningPipeline:
 
 
 class JobEnrichmentPipeline:
-    STACK_KEYWORDS = {
-        "spring boot": "Spring Boot",
-        "springboot": "Spring Boot",
-        "spring": "Spring Boot",
-        "angular": "Angular",
-        "react": "React",
-        "vue": "Vue",
-        "java": "Java",
-        "javascript": "JavaScript",
-        "typescript": "TypeScript",
-        "python": "Python",
-        "sql": "SQL",
-        "postgres": "PostgreSQL",
-        "postgresql": "PostgreSQL",
-        "mysql": "MySQL",
-        "docker": "Docker",
-        "kubernetes": "Kubernetes",
-        "k8s": "Kubernetes",
-        "aws": "AWS",
-        "azure": "Azure",
-        "gcp": "GCP",
-        "node": "Node.js",
-        "nodejs": "Node.js",
-        "node.js": "Node.js",
-        "django": "Django",
-        "flask": "Flask",
-        "fastapi": "FastAPI",
-        ".net": ".NET",
-        "dotnet": ".NET",
-        "c#": "C#",
-        "php": "PHP",
-        "laravel": "Laravel",
-        "ruby": "Ruby",
-        "rails": "Ruby on Rails",
-        "go": "Go",
-        "golang": "Go",
-        "git": "Git",
-        "linux": "Linux",
-        "mongodb": "MongoDB",
-        "redis": "Redis",
-        "graphql": "GraphQL",
-        "rest": "REST",
-    }
+    # Derivadas del catálogo canónico; no hay listas de stacks duplicadas aquí.
+    STACK_KEYWORDS = stack_catalog.STACK_KEYWORDS
+    STACK_PATTERNS = [
+        (_compile_stack_pattern(pattern), canonical)
+        for pattern, canonical in stack_catalog.STACK_PATTERNS
+    ]
 
     # Pre-filtro por título/descripción; el texto se normaliza (minúsculas, sin acentos).
     ENTRY_LEVEL_PATTERNS = [
@@ -149,37 +124,6 @@ class JobEnrichmentPipeline:
         r"\bsenior\b",
         r"\bsr\b\.?",
         r"\blead\b",
-    ]
-
-    STACK_PATTERNS = [
-        (r"\bspring\s*boot\b", "Spring Boot"),
-        (r"\bangular(?:js)?\b", "Angular"),
-        (r"\btypescript\b", "TypeScript"),
-        (r"\bjavascript\b", "JavaScript"),
-        (r"\bnode\.?\s?js\b", "Node.js"),
-        (r"\bpostgres(?:ql)?\b", "PostgreSQL"),
-        (r"\bmysql\b", "MySQL"),
-        (r"\bmongodb\b", "MongoDB"),
-        (r"\bkubernetes\b|\bk8s\b", "Kubernetes"),
-        (r"\bdocker\b", "Docker"),
-        (r"\bgraphql\b", "GraphQL"),
-        (r"\bfastapi\b", "FastAPI"),
-        (r"\bdjango\b", "Django"),
-        (r"\bflask\b", "Flask"),
-        (r"\blaravel\b", "Laravel"),
-        (r"\breact(?:js)?\b", "React"),
-        (r"\bpython\b", "Python"),
-        (r"\bjava\b", "Java"),
-        (r"\bsql\b", "SQL"),
-        (r"\baws\b", "AWS"),
-        (r"\bgcp\b|\bgoogle cloud\b", "GCP"),
-        (r"\bgit\b", "Git"),
-        (r"\.net\b|\bdotnet\b", ".NET"),
-        (r"\bc#", "C#"),
-        (r"\bphp\b", "PHP"),
-        (r"\bruby\b", "Ruby"),
-        (r"\bgolang\b|\bgo\b", "Go"),
-        (r"\bvue(?:\.js)?\b", "Vue"),
     ]
 
     def __init__(self):
@@ -206,24 +150,7 @@ class JobEnrichmentPipeline:
         return "Presencial"
 
     def _canonicalize_stack_token(self, token):
-        norm = _normalize_text(token)
-        norm_compact = norm.replace(".", "").replace("#", " sharp").strip()
-        # direct map
-        for key, canonical in self.STACK_KEYWORDS.items():
-            key_norm = _normalize_text(key)
-            if norm == key_norm or norm_compact == _normalize_text(key.replace(".", "")):
-                return canonical
-        # contains-based fallbacks for common variants
-        if "spring" in norm and "boot" in norm:
-            return "Spring Boot"
-        if norm in {"js", "javascript"}:
-            return "JavaScript"
-        if norm in {"ts", "typescript"}:
-            return "TypeScript"
-        if norm == "nodejs":
-            return "Node.js"
-        # Title-case reasonable default for unknown tags
-        return token.strip()
+        return stack_catalog.canonical_tech(token)
 
     def _detect_stack(self, adapter):
         found = {}
@@ -236,10 +163,28 @@ class JobEnrichmentPipeline:
                     found[key] = canon
 
         haystack = _normalize_text(f"{adapter.get('titulo') or ''} {adapter.get('descripcion') or ''}")
-        # keyword matching over title+description, with word boundaries so that
-        # e.g. "Java" does not match "JavaScript" and "SQL" does not match "PostgreSQL"
+        matches = []
         for pattern, canonical in self.STACK_PATTERNS:
-            if not re.search(pattern, haystack):
+            for match in re.finditer(pattern, haystack):
+                matches.append((canonical, match.start(), match.end()))
+
+        # Un match contenido en otro de un stack más específico se descarta:
+        # "react" dentro de "react native", "ruby" dentro de "ruby on rails", etc.
+        shadowed = set()
+        for index, (canonical, start, end) in enumerate(matches):
+            for other_index, (other_canonical, other_start, other_end) in enumerate(matches):
+                if index == other_index or canonical == other_canonical:
+                    continue
+                if (
+                    other_start <= start
+                    and end <= other_end
+                    and (other_end - other_start) > (end - start)
+                ):
+                    shadowed.add(index)
+                    break
+
+        for index, (canonical, _, _) in enumerate(matches):
+            if index in shadowed:
                 continue
             key = canonical.lower()
             if key not in found:

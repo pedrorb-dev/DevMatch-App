@@ -1,5 +1,6 @@
 import pytest
 
+from job_scraper.utils import query_builder
 from job_scraper.utils.query_builder import SearchQueryBuilder, should_follow_job
 
 
@@ -405,3 +406,39 @@ def test_query_builder_delega_should_follow_job():
     assert builder.should_follow_job("Desarrollador Java") is True
     assert builder.should_follow_job("Becario de TI") is False
     assert builder.should_follow_job("Senior Java Developer") is False
+
+
+# --- slugs derivados del catálogo (SPEC 12) ---------------------------------
+
+
+def test_no_quedan_diccionarios_de_slugs_duplicados():
+    for name in ("OCC_STACK_SLUGS", "COMPUTRABAJO_STACK_SLUGS", "GETONBRD_STACK_SLUGS"):
+        assert not hasattr(query_builder, name)
+
+
+@pytest.mark.parametrize(
+    ("stack", "slug"),
+    [
+        ("React Native", "react-native"),
+        ("Next.js", "next-js"),
+        ("NestJS", "nestjs"),
+        ("FastAPI", "fastapi"),
+        ("Terraform", "terraform"),
+        ("Kafka", "kafka"),
+        ("Elasticsearch", "elasticsearch"),
+    ],
+)
+def test_slugs_de_stacks_nuevos_salen_del_catalogo(stack, slug):
+    builder = make_builder([{"stack": [stack], "experiencia_anos": 2}])
+
+    assert f"https://www.occ.com.mx/empleos/de-{slug}/" in builder.build_urls("occ")
+    assert f"https://mx.computrabajo.com/trabajo-de-{slug}" in builder.build_urls("computrabajo")
+    assert f"https://www.getonbrd.com/jobs-{slug}" in builder.build_urls("getonbrd")
+
+
+def test_slug_desconocido_usa_slugify_como_fallback():
+    builder = make_builder([{"stack": ["Haskell"], "experiencia_anos": 2}])
+
+    assert "https://www.occ.com.mx/empleos/de-haskell/" in builder.build_urls("occ")
+    assert "https://mx.computrabajo.com/trabajo-de-haskell" in builder.build_urls("computrabajo")
+    assert "https://www.getonbrd.com/jobs-haskell" in builder.build_urls("getonbrd")

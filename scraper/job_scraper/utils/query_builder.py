@@ -5,6 +5,8 @@ from urllib.parse import quote_plus
 
 from supabase import create_client
 
+from job_scraper import stack_catalog
+
 HIRELINE_BASE = "https://hireline.io"
 OCC_BASE = "https://www.occ.com.mx"
 COMPUTRABAJO_BASE = "https://mx.computrabajo.com"
@@ -51,120 +53,9 @@ SENIOR_TITLE_PATTERNS = [
     r"\bmanager\b",
 ]
 
-# Slugs de OCC para los stacks canónicos que detecta el pipeline. El resto se
-# resuelve con `_slugify`.
-OCC_STACK_SLUGS = {
-    "spring boot": "spring-boot",
-    "angular": "angular",
-    "react": "react",
-    "vue": "vue",
-    "java": "java",
-    "javascript": "javascript",
-    "typescript": "typescript",
-    "python": "python",
-    "sql": "sql",
-    "postgresql": "postgresql",
-    "mysql": "mysql",
-    "mongodb": "mongodb",
-    "docker": "docker",
-    "kubernetes": "kubernetes",
-    "aws": "aws",
-    "azure": "azure",
-    "gcp": "gcp",
-    "node.js": "node-js",
-    "django": "django",
-    "flask": "flask",
-    "fastapi": "fastapi",
-    ".net": "dotnet",
-    "c#": "c-sharp",
-    "php": "php",
-    "laravel": "laravel",
-    "ruby": "ruby",
-    "ruby on rails": "ruby-on-rails",
-    "go": "go",
-    "git": "git",
-    "linux": "linux",
-    "redis": "redis",
-    "graphql": "graphql",
-    "rest": "rest",
-}
-
-# Slugs de Computrabajo para los mismos stacks canónicos. Mismos valores que
-# `OCC_STACK_SLUGS`; el resto se resuelve con `_slugify`.
-COMPUTRABAJO_STACK_SLUGS = {
-    "spring boot": "spring-boot",
-    "angular": "angular",
-    "react": "react",
-    "vue": "vue",
-    "java": "java",
-    "javascript": "javascript",
-    "typescript": "typescript",
-    "python": "python",
-    "sql": "sql",
-    "postgresql": "postgresql",
-    "mysql": "mysql",
-    "mongodb": "mongodb",
-    "docker": "docker",
-    "kubernetes": "kubernetes",
-    "aws": "aws",
-    "azure": "azure",
-    "gcp": "gcp",
-    "node.js": "node-js",
-    "django": "django",
-    "flask": "flask",
-    "fastapi": "fastapi",
-    ".net": "dotnet",
-    "c#": "c-sharp",
-    "php": "php",
-    "laravel": "laravel",
-    "ruby": "ruby",
-    "ruby on rails": "ruby-on-rails",
-    "go": "go",
-    "git": "git",
-    "linux": "linux",
-    "redis": "redis",
-    "graphql": "graphql",
-    "rest": "rest",
-}
-
-# Slugs de Get on Board para los mismos stacks canónicos. Mismos valores que
-# `OCC_STACK_SLUGS` / `COMPUTRABAJO_STACK_SLUGS`; el resto se resuelve con
-# `_slugify`.
-GETONBRD_STACK_SLUGS = {
-    "spring boot": "spring-boot",
-    "angular": "angular",
-    "react": "react",
-    "vue": "vue",
-    "java": "java",
-    "javascript": "javascript",
-    "typescript": "typescript",
-    "python": "python",
-    "sql": "sql",
-    "postgresql": "postgresql",
-    "mysql": "mysql",
-    "mongodb": "mongodb",
-    "docker": "docker",
-    "kubernetes": "kubernetes",
-    "aws": "aws",
-    "azure": "azure",
-    "gcp": "gcp",
-    "node.js": "node-js",
-    "django": "django",
-    "flask": "flask",
-    "fastapi": "fastapi",
-    ".net": "dotnet",
-    "c#": "c-sharp",
-    "php": "php",
-    "laravel": "laravel",
-    "ruby": "ruby",
-    "ruby on rails": "ruby-on-rails",
-    "go": "go",
-    "git": "git",
-    "linux": "linux",
-    "redis": "redis",
-    "graphql": "graphql",
-    "rest": "rest",
-}
+def _stack_slug(tech, portal):
+    """Slug del catálogo canónico para el portal; `_slugify` como fallback."""
+    return stack_catalog.STACK_SLUGS.get(portal, {}).get(_normalize_text(tech)) or _slugify(tech)
 
 
 def should_follow_job(title, active_experience_levels):
@@ -364,7 +255,7 @@ class SearchQueryBuilder:
             urls.append(f"{OCC_BASE}{self.OCC_TECH_SEARCH.format(slug=self.OCC_ENTRY_SLUG)}")
 
         for tech in self.stack:
-            slug = OCC_STACK_SLUGS.get(tech.strip().lower()) or _slugify(tech)
+            slug = _stack_slug(tech, OCC_PLATFORM)
             if slug:
                 urls.append(f"{OCC_BASE}{self.OCC_TECH_SEARCH.format(slug=slug)}")
 
@@ -378,7 +269,7 @@ class SearchQueryBuilder:
             urls.append(f"{COMPUTRABAJO_BASE}{self.COMPUTRABAJO_ENTRY_ROUTE}")
 
         for tech in self.stack:
-            slug = COMPUTRABAJO_STACK_SLUGS.get(tech.strip().lower()) or _slugify(tech)
+            slug = _stack_slug(tech, COMPUTRABAJO_PLATFORM)
             if not slug:
                 continue
 
@@ -405,7 +296,7 @@ class SearchQueryBuilder:
         # `experiencia_anos` (el seniority fino lo hacen `should_follow_job` y
         # `JobEnrichmentPipeline`) y se evita el doble prefijo `/jobs/`-`/empleos/`.
         for tech in self.stack:
-            slug = GETONBRD_STACK_SLUGS.get(tech.strip().lower()) or _slugify(tech)
+            slug = _stack_slug(tech, GETONBRD_PLATFORM)
             if not slug:
                 continue
             urls.append(f"{GETONBRD_BASE}/jobs-{slug}")

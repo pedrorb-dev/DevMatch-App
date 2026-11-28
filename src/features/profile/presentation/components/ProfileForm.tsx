@@ -1,24 +1,10 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { TECH_OPTIONS } from '@/core/config/stacks';
 import { useTheme } from '@/core/theme/ThemeContext';
 
 import type { UserProfile } from '../../domain/entities/UserProfile';
-
-const TECH_OPTIONS = [
-  'Angular',
-  'Spring Boot',
-  'React',
-  'Node.js',
-  'Python',
-  'React Native',
-  'Java',
-  '.NET',
-  'PHP',
-  'FastApi',
-  'Django',
-  'Laravel',
-];
 
 const ENGLISH_OPTIONS: UserProfile['englishLevel'][] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 

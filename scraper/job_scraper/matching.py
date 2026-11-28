@@ -8,7 +8,7 @@ alias como ``springboot`` cuente como ``Spring Boot``.
 import re
 import unicodedata
 
-from job_scraper.pipelines import JobEnrichmentPipeline
+from job_scraper import stack_catalog
 
 
 ENGLISH_RANK = {"No especificado": 0, "B1": 1, "B2": 2, "C1": 3}
@@ -16,14 +16,6 @@ ENGLISH_RANK = {"No especificado": 0, "B1": 1, "B2": 2, "C1": 3}
 # El perfil de la app permite A1/A2/C2 aunque el scraper solo detecte los
 # niveles de ENGLISH_RANK; se ordenan para no descartar perfiles C2.
 _EXTRA_ENGLISH_RANK = {"A1": 0, "A2": 0, "C2": 4}
-
-# Alias que no están en STACK_KEYWORDS pero sí aparecen en ofertas reales.
-_EXTRA_STACK_ALIASES = {
-    "angularjs": "Angular",
-    "reactjs": "React",
-    "js": "JavaScript",
-    "ts": "TypeScript",
-}
 
 def _normalize_key(value):
     text = unicodedata.normalize("NFKD", str(value or ""))
@@ -42,24 +34,7 @@ _NORMALIZED_RANKS = {
 
 def canonical_tech(token):
     """Devuelve el nombre canónico de una tecnología, resolviendo alias."""
-    text = str(token or "").strip()
-    if not text:
-        return ""
-
-    norm = _normalize_key(text)
-    compact = norm.replace(".", "").replace("#", "")
-    for keyword, canonical in JobEnrichmentPipeline.STACK_KEYWORDS.items():
-        key = _normalize_key(keyword)
-        if norm == key or compact == key.replace(".", "").replace("#", ""):
-            return canonical
-
-    if norm in _EXTRA_STACK_ALIASES:
-        return _EXTRA_STACK_ALIASES[norm]
-    if "spring" in norm and "boot" in norm:
-        return "Spring Boot"
-
-    # Lo desconocido se conserva tal cual, igual que en el pipeline.
-    return text
+    return stack_catalog.canonical_tech(token)
 
 
 def _as_list(value):

@@ -522,3 +522,72 @@ def test_upsert_incluye_lat_lng_en_payload():
 )
 def test_upsert_coordena_invalida_se_vuelve_null(value, expected):
     assert SupabaseUpsertPipeline._coerce_coordenada(value) == expected
+
+
+# --- detección de stack desde el catálogo (SPEC 12) --------------------------
+
+
+def detect_stack(titulo="", descripcion="", tags=None):
+    item = JobOfferItem(
+        titulo=titulo,
+        empresa="ACME",
+        modalidad_raw="",
+        ubicacion_texto="",
+        descripcion=descripcion,
+        tags_tecnologias=tags or [],
+        url_oferta="https://example.com/empleo/stack-1",
+    )
+    return run_enrichment(item)["stack_detectado"]
+
+
+def test_detecta_react_native_sin_anadir_react():
+    stacks = detect_stack(
+        titulo="React Native Developer",
+        descripcion="Desarrollamos apps con react-native para iOS y Android.",
+    )
+
+    assert "React Native" in stacks
+    assert "React" not in stacks
+
+
+def test_react_y_react_native_se_detectan_cuando_ambos_aparecen():
+    stacks = detect_stack(descripcion="Trabajarás con React y React Native.")
+
+    assert "React" in stacks
+    assert "React Native" in stacks
+
+
+@pytest.mark.parametrize(
+    ("descripcion", "expected"),
+    [
+        ("Experiencia con Azure.", "Azure"),
+        ("Conocimientos de Ruby on Rails.", "Ruby on Rails"),
+        ("Trabajo en Linux.", "Linux"),
+        ("Uso de Redis.", "Redis"),
+        ("Diseño de REST API.", "REST"),
+    ],
+)
+def test_detecta_patrones_de_descripcion_nuevos(descripcion, expected):
+    assert expected in detect_stack(descripcion=descripcion)
+
+
+@pytest.mark.parametrize(
+    ("tag", "expected"),
+    [
+        ("FastApi", "FastAPI"),
+        ("react-native", "React Native"),
+        ("C#", "C#"),
+        (".NET", ".NET"),
+        ("golang", "Go"),
+        ("spring boot 3", "Spring Boot"),
+    ],
+)
+def test_canonicaliza_tags_segun_el_catalogo(tag, expected):
+    assert expected in detect_stack(tags=[tag])
+
+
+def test_no_colisionan_java_con_javascript_ni_sql_con_postgresql():
+    stacks = detect_stack(descripcion="Java, JavaScript, SQL y PostgreSQL.")
+
+    assert {"Java", "JavaScript", "SQL", "PostgreSQL"} <= set(stacks)
+
