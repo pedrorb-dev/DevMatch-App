@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -16,6 +17,12 @@ import { ProfileProvider } from '@/features/profile/presentation/context/Profile
 
 function RootNavigator() {
   const { isDark, colors } = useTheme();
+
+  useEffect(() => {
+    // El Stack nativo deja el fondo del contenedor sin color; sin esto se ve
+    // blanco durante las transiciones cuando el tema es oscuro.
+    void SystemUI.setBackgroundColorAsync(colors.background);
+  }, [colors.background]);
 
   return (
     <>
